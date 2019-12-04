@@ -1,0 +1,12 @@
+<launch>
+
+<!--Lancar no do driver do laser-->
+<include file="$(find livox_ros_driver)/launch/livox_lidar.launch"/>
+
+<!--Lancar no do driver camera USB-->
+<include file="$(find usb_cam)/launch/usb_cam.launch"/>
+
+<!--Lancar processamento dos dados vindos de cada um-->
+
+
+</launch>
