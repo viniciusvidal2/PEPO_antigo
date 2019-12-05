@@ -6,7 +6,9 @@ ProcessCloud::ProcessCloud()
     // Dimensoes da camera USB de entrada
     cam_w = 1024; cam_h = 768;
     // Inicia matriz intrinseca da camera USB
-
+    K_cam << 1484.701399,    0.000000, 432.741036,
+                0.000000, 1477.059238, 412.362072,
+                0.000000,    0.000000,   1.000000;
     // Inicia nome da pasta -> criar pasta no Dados_B9 no DESKTOP!
     char* home;
     home = getenv("HOME");
@@ -99,6 +101,8 @@ void ProcessCloud::createVirtualLaserImage(PointCloud<PointTN>::Ptr nuvem){
     }
     // Coloca na foto que e variavel global
     fl.copyTo(foto_laser);
+    // Salva de uma vez a foto do laser
+    saveImage(foto_laser, "camera_virtual");
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
 void ProcessCloud::saveCloud(PointCloud<PointTN>::Ptr nuvem){
@@ -106,11 +110,11 @@ void ProcessCloud::saveCloud(PointCloud<PointTN>::Ptr nuvem){
     savePLYFileASCII(pasta+nome_nuvem, *nuvem);
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
-void ProcessCloud::saveImage(cv::Mat img){
-    std::string nome = pasta+"camera_virtual.png";
+void ProcessCloud::saveImage(cv::Mat img, string nome){
+    std::string final = pasta+nome+".png";
     std::vector<int> opcoes;
     opcoes.push_back(cv::IMWRITE_PNG_COMPRESSION);
-    cv::imwrite(nome, foto_laser, opcoes);
+    cv::imwrite(final, foto_laser, opcoes);
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
 float ProcessCloud::normaldist(float x, float media, float dev){

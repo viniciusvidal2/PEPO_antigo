@@ -77,7 +77,7 @@ public:
   void colorCloudThroughDistance(PointCloud<PointTN>::Ptr nuvem);
   void createVirtualLaserImage(PointCloud<PointTN>::Ptr nuvem);
   void saveCloud(PointCloud<PointTN>::Ptr nuvem);
-  void saveImage(cv::Mat img);
+  void saveImage(cv::Mat img, std::string nome);
 
 private:
   /// Metodos

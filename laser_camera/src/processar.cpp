@@ -64,10 +64,6 @@ void camCallback(const sensor_msgs::ImageConstPtr& msg){
     if(!nuvem_pronta){
         // Aqui ja temos a imagem em ponteiro de opencv
         image_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
-        // Salvando a imagem
-        //        char* home;
-        //        home = getenv("HOME");
-        //        imwrite(std::string(home)+"/Desktop/Dados_B9/rgb.jpg", image_ptr->image);
     }
 }
 
@@ -82,17 +78,25 @@ void laserCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
     // Se total acumulado, travar o resto e trabalhar
     if(contador_nuvem == N){
         // Vira a variavel de controle de recebimento de imagens
+        ROS_INFO("Nuvem foi acumulada, processando ...");
         nuvem_pronta = true;
         // Calcular normais da nuvem voltadas para a origem
+        ROS_INFO("Calculando normais da nuvem e ajustando sentido ...");
         PointCloud<PointTN>::Ptr cloud_normals (new PointCloud<PointTN>());
         pc->calculateNormals(accumulated_cloud, cloud_normals);
         // Colorir a nuvem segundo a distancia
+        ROS_INFO("Colorindo nuvem segundo distancia do ponto ...");
         pc->colorCloudThroughDistance(cloud_normals);
         // Criar imagem projetando com mesma matriz da câmera
+        ROS_INFO("Projetando sobre a imagem virtual do laser ...");
         pc->createVirtualLaserImage(cloud_normals);
         // Salvar dados na pasta Dados_B9, no Desktop
-        pc->saveImage(image_ptr->image);
+        ROS_INFO("Salvando dados na pasta Dados_B9 ...");
+        pc->saveImage(image_ptr->image, "camera_rgb");
         pc->saveCloud(cloud_normals);
+        // Terminamos o processamento, travar tudo
+        ROS_INFO("Tudo terminado, conferir na pasta!");
+        fim_processo = true;
     } else {
         contador_nuvem++;
     }
