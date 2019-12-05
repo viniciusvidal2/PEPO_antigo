@@ -84,13 +84,15 @@ void laserCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
         // Vira a variavel de controle de recebimento de imagens
         nuvem_pronta = true;
         // Calcular normais da nuvem voltadas para a origem
-
+        PointCloud<PointTN>::Ptr cloud_normals (new PointCloud<PointTN>());
+        pc->calculateNormals(accumulated_cloud, cloud_normals);
         // Colorir a nuvem segundo a distancia
-
+        pc->colorCloudThroughDistance(cloud_normals);
         // Criar imagem projetando com mesma matriz da câmera
-
+        pc->createVirtualLaserImage(cloud_normals);
         // Salvar dados na pasta Dados_B9, no Desktop
-
+        pc->saveImage(image_ptr->image);
+        pc->saveCloud(cloud_normals);
     } else {
         contador_nuvem++;
     }
