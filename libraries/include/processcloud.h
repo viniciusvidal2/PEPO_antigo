@@ -58,14 +58,35 @@
 #include <ctime>
 #include <math.h>
 
+/// Essa classe tera todas as funçoes para trabalhar a nuvem de pontos, calcular normais, colorir,
+/// salvar nuvens e imagens e ate mesmo projetar os pontos para criar a imagem de laser virtual
+using namespace std;
+using namespace pcl;
+using namespace pcl::io;
+using namespace cv;
+
+typedef PointXYZRGB       PointT ;
+typedef PointXYZRGBNormal PointTN;
+
 class ProcessCloud
 {
 public:
   ProcessCloud();
   virtual ~ProcessCloud();
+  void calculateNormals(PointCloud<PointT>::Ptr in, PointCloud<PointTN>::Ptr acc_normal);
+  void colorCloudThroughDistance(PointCloud<PointTN>::Ptr nuvem);
+  void createVirtualLaserImage(PointCloud<PointTN>::Ptr nuvem);
+  void saveCloud(PointCloud<PointTN>::Ptr nuvem);
+  void saveImage(cv::Mat img);
 
 private:
-
+  /// Metodos
+  float normaldist(float x, float media, float dev);
+  /// Variaveis
+  Eigen::Matrix3f K_cam; // Parametros intrinsecos da camera
+  cv::Mat foto_laser;    // Para projetar os pontos do laser sobre
+  int cam_w, cam_h;      // Dimensoes da camera
+  std::string pasta;     // Nome da pasta a salvar as coisas
 };
 
 #endif // PROCESSCLOUD_H
