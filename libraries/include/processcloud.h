@@ -84,7 +84,6 @@ private:
   float normaldist(float x, float media, float dev);
   /// Variaveis
   Eigen::Matrix3f K_cam; // Parametros intrinsecos da camera
-  cv::Mat foto_laser;    // Para projetar os pontos do laser sobre
   int cam_w, cam_h;      // Dimensoes da camera
   std::string pasta;     // Nome da pasta a salvar as coisas
 };

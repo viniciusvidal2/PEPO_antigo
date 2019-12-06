@@ -78,25 +78,27 @@ void laserCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
     // Se total acumulado, travar o resto e trabalhar
     if(contador_nuvem == N){
         // Vira a variavel de controle de recebimento de imagens
-        ROS_INFO("Nuvem foi acumulada, processando ...");
+        ROS_WARN("Nuvem foi acumulada, processando ...");
         nuvem_pronta = true;
         // Calcular normais da nuvem voltadas para a origem
-        ROS_INFO("Calculando normais da nuvem e ajustando sentido ...");
+        ROS_WARN("Calculando normais da nuvem e ajustando sentido ...");
         PointCloud<PointTN>::Ptr cloud_normals (new PointCloud<PointTN>());
         pc->calculateNormals(accumulated_cloud, cloud_normals);
         // Colorir a nuvem segundo a distancia
-        ROS_INFO("Colorindo nuvem segundo distancia do ponto ...");
+        ROS_WARN("Colorindo nuvem segundo distancia do ponto ...");
         pc->colorCloudThroughDistance(cloud_normals);
         // Criar imagem projetando com mesma matriz da câmera
-        ROS_INFO("Projetando sobre a imagem virtual do laser ...");
+        ROS_WARN("Projetando sobre a imagem virtual do laser ...");
         pc->createVirtualLaserImage(cloud_normals);
         // Salvar dados na pasta Dados_B9, no Desktop
-        ROS_INFO("Salvando dados na pasta Dados_B9 ...");
+        ROS_WARN("Salvando dados na pasta Dados_B9 ...");
         pc->saveImage(image_ptr->image, "camera_rgb");
         pc->saveCloud(cloud_normals);
         // Terminamos o processamento, travar tudo
-        ROS_INFO("Tudo terminado, conferir na pasta!");
+        ROS_WARN("Tudo terminado, conferir na pasta!");
         fim_processo = true;
+        contador_nuvem++;
+        system("gnome-terminal -x sh -c 'rosnode kill -a'");
     } else {
         contador_nuvem++;
     }
@@ -124,6 +126,7 @@ int main(int argc, char **argv)
     // O no so funciona uma vez, depois e encerrado
     ros::Rate r(5);
     while(ros::ok()){
+        ROS_INFO("................. Processando .................");
         r.sleep();
         ros::spinOnce();
         // Fim do processo cancela o no

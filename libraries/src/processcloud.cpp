@@ -28,8 +28,8 @@ void ProcessCloud::calculateNormals(PointCloud<PointT>::Ptr in, PointCloud<Point
     NormalEstimationOMP<PointT, Normal> ne;
     ne.setInputCloud(in);
     ne.setSearchMethod(tree);
-    ne.setKSearch(20);
-    ne.setNumberOfThreads(8);
+    ne.setKSearch(10);
+    ne.setNumberOfThreads(20);
     // Nuvem de normais calculada
     PointCloud<Normal>::Ptr cloud_normals (new PointCloud<Normal>());
     ne.compute(*cloud_normals);
@@ -56,7 +56,7 @@ void ProcessCloud::calculateNormals(PointCloud<PointT>::Ptr in, PointCloud<Point
 /////////////////////////////////////////////////////////////////////////////////////////////////
 void ProcessCloud::colorCloudThroughDistance(PointCloud<PointTN>::Ptr nuvem){
     // Varre nuvem atras da maior e menor distancia
-    float mindist = 1000, maxdist = 0, scale, dev = 300;
+    float mindist = 1000, maxdist = 0, scale, dev = 400;
     float r, g, b;
     float alpha = 250.0 / normaldist(0, 0, dev);
     std::vector<float> dists(nuvem->size());
@@ -81,9 +81,16 @@ void ProcessCloud::colorCloudThroughDistance(PointCloud<PointTN>::Ptr nuvem){
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
 void ProcessCloud::createVirtualLaserImage(PointCloud<PointTN>::Ptr nuvem){
+    // Rotacionar a nuvem para cair no frame da câmera (laser tem X para frente, câmera deve ter
+    // Z para frente e X para o lado
+    Eigen::Matrix3f R;
+    R = Eigen::AngleAxisf(M_PI/2, Eigen::Vector3f::UnitZ()) * Eigen::AngleAxisf(-M_PI/2, Eigen::Vector3f::UnitY());
+    Eigen::Matrix4f T = Eigen::Matrix4f::Identity();     // Matriz de transformaçao homogenea
+    T.block<3, 3>(0, 0) = R;                             // Adiciona a rotacao onde deve estar
+    transformPointCloudWithNormals(*nuvem, *nuvem, T);
     // Projetar os pontos na foto virtual e colorir imagem
-    cv::Mat fl(cv::Size(cam_w, cam_h), CV_8UC3, cv::Scalar(0, 0, 0)); // Mesmas dimensoes que a camera tiver
-    #pragma omp parallel for num_threads(10)
+    cv::Mat fl(cv::Size(cam_w, cam_h), CV_8UC3, cv::Scalar(100, 100, 100)); // Mesmas dimensoes que a camera tiver
+    #pragma omp parallel for num_threads(100)
     for(size_t i = 0; i < nuvem->size(); i++){
         /// Pegar ponto em coordenadas normais
         Eigen::MatrixXf X_(3, 1);
@@ -99,22 +106,18 @@ void ProcessCloud::createVirtualLaserImage(PointCloud<PointTN>::Ptr nuvem){
             fl.at<cv::Vec3b>(cv::Point(X(0,0), X(1,0))) = cor;
         }
     }
-    // Coloca na foto que e variavel global
-    fl.copyTo(foto_laser);
     // Salva de uma vez a foto do laser
-    saveImage(foto_laser, "camera_virtual");
+    saveImage(fl, "camera_virtual");
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
 void ProcessCloud::saveCloud(PointCloud<PointTN>::Ptr nuvem){
     std::string nome_nuvem = pasta+"nuvem_final.ply";
-    savePLYFileASCII(pasta+nome_nuvem, *nuvem);
+    savePLYFileASCII(nome_nuvem, *nuvem);
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
 void ProcessCloud::saveImage(cv::Mat img, string nome){
-    std::string final = pasta+nome+".png";
-    std::vector<int> opcoes;
-    opcoes.push_back(cv::IMWRITE_PNG_COMPRESSION);
-    cv::imwrite(final, foto_laser, opcoes);
+    std::string final = pasta+nome+".jpg";
+    cv::imwrite(final, img);
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
 float ProcessCloud::normaldist(float x, float media, float dev){
