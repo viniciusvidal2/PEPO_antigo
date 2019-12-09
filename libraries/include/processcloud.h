@@ -74,6 +74,7 @@ public:
   ProcessCloud();
   virtual ~ProcessCloud();
   void calculateNormals(PointCloud<PointT>::Ptr in, PointCloud<PointTN>::Ptr acc_normal);
+  void calculateNormals(PointCloud<PointTN>::Ptr acc_normal);
   void colorCloudThroughDistance(PointCloud<PointTN>::Ptr nuvem);
   void createVirtualLaserImage(PointCloud<PointTN>::Ptr nuvem);
   void saveCloud(PointCloud<PointTN>::Ptr nuvem);

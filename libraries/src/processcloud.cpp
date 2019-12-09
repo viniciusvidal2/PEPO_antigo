@@ -51,7 +51,35 @@ void ProcessCloud::calculateNormals(PointCloud<PointT>::Ptr in, PointCloud<Point
             acc_normal->points[i].normal_z = -acc_normal->points[i].normal_z;
         }
     }
+}
+/////////////////////////////////////////////////////////////////////////////////////////////////
+void ProcessCloud::calculateNormals(PointCloud<PointTN>::Ptr acc_normal){
+    // Vetor de zeros simbolizando a origem
+    Eigen::Vector3f C = Eigen::Vector3f::Zero();
+    // Inicia estimador de normais
+    search::KdTree<PointTN>::Ptr tree (new search::KdTree<PointTN>());
+    NormalEstimationOMP<PointTN, PointTN> ne;
+    ne.setInputCloud(acc_normal);
+    ne.setSearchMethod(tree);
+    ne.setKSearch(10);
+    ne.setNumberOfThreads(20);
+    ne.compute(*acc_normal);
+    // Filtra por normais problematicas
+    std::vector<int> indicesnan;
+    removeNaNNormalsFromPointCloud(*acc_normal, *acc_normal, indicesnan);
 
+    // Forcar virar as normais na marra para a origem
+    for(size_t i=0; i < acc_normal->size(); i++){
+        Eigen::Vector3f normal, cp;
+        normal << acc_normal->points[i].normal_x, acc_normal->points[i].normal_y, acc_normal->points[i].normal_z;
+        cp     << C(0)-acc_normal->points[i].x  , C(1)-acc_normal->points[i].y  , C(2)-acc_normal->points[i].z  ;
+        float cos_theta = (normal.dot(cp))/(normal.norm()*cp.norm());
+        if(cos_theta <= 0){ // Esta apontando errado, deve inverter
+            acc_normal->points[i].normal_x = -acc_normal->points[i].normal_x;
+            acc_normal->points[i].normal_y = -acc_normal->points[i].normal_y;
+            acc_normal->points[i].normal_z = -acc_normal->points[i].normal_z;
+        }
+    }
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
 void ProcessCloud::colorCloudThroughDistance(PointCloud<PointTN>::Ptr nuvem){

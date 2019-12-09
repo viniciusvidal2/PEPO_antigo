@@ -53,7 +53,7 @@ cv_bridge::CvImagePtr image_ptr; // Ponteiro para imagem da camera
 
 pcl::PointCloud<PointT>::Ptr accumulated_cloud; // Nuvem de entrada acumulada
 
-int contador_nuvem = 0, N = 100; // Controle de quantas nuvens absorvidas
+int contador_nuvem = 0, N = 200; // Controle de quantas nuvens absorvidas
 
 ProcessCloud* pc; // Classe com todas as funcoes de trabalho na nuvem separadas e moduladas
 
