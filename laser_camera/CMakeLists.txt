@@ -28,3 +28,6 @@ target_link_libraries(processar_node ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${Open
 
 add_executable(otimizar_nuvem_node src/otimizar_nuvem.cpp ../libraries/src/processcloud.cpp)
 target_link_libraries(otimizar_nuvem_node ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS} ${OpenMP_LIBS})
+
+add_executable(clusters_node src/separar_clusters.cpp ../libraries/src/clusters.cpp ../libraries/src/processcloud.cpp)
+target_link_libraries(clusters_node ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS} ${OpenMP_LIBS})
