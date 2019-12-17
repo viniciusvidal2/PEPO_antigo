@@ -49,7 +49,7 @@ public:
     virtual ~Clusters();
     void obtainPlanes(PointCloud<PointTN>::Ptr in, vector<PointCloud<PointTN>> &planos, PointCloud<PointTN>::Ptr out);
     void extractClusters(PointCloud<PointTN>::Ptr in, vector<PointCloud<PointTN>> &clust);
-    void colorClouds(vector<PointCloud<PointTN>> &clouds);
+    void colorCloud(PointCloud<PointTN>::Ptr cloud);
 };
 
 #endif // CLUSTERS_H

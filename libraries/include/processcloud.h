@@ -76,7 +76,8 @@ public:
   void calculateNormals(PointCloud<PointT>::Ptr in, PointCloud<PointTN>::Ptr acc_normal);
   void calculateNormals(PointCloud<PointTN>::Ptr acc_normal);
   void colorCloudThroughDistance(PointCloud<PointTN>::Ptr nuvem);
-  void createVirtualLaserImage(PointCloud<PointTN>::Ptr nuvem);
+  void transformToCameraFrame(PointCloud<PointTN>::Ptr nuvem);
+  void createVirtualLaserImage(PointCloud<PointTN>::Ptr nuvem, std::string nome);
   void saveCloud(PointCloud<PointTN>::Ptr nuvem);
   void saveImage(cv::Mat img, std::string nome);
 

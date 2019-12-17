@@ -53,7 +53,7 @@ cv_bridge::CvImagePtr image_ptr; // Ponteiro para imagem da camera
 
 pcl::PointCloud<PointT>::Ptr accumulated_cloud; // Nuvem de entrada acumulada
 
-int contador_nuvem = 0, N = 200; // Controle de quantas nuvens absorvidas
+int contador_nuvem = 0, N = 300; // Controle de quantas nuvens absorvidas
 
 ProcessCloud* pc; // Classe com todas as funcoes de trabalho na nuvem separadas e moduladas
 
@@ -89,7 +89,8 @@ void laserCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
         pc->colorCloudThroughDistance(cloud_normals);
         // Criar imagem projetando com mesma matriz da câmera
         ROS_WARN("Projetando sobre a imagem virtual do laser ...");
-        pc->createVirtualLaserImage(cloud_normals);
+        pc->transformToCameraFrame(cloud_normals);
+        pc->createVirtualLaserImage(cloud_normals, "imagem_virtual");
         // Salvar dados na pasta Dados_B9, no Desktop
         ROS_WARN("Salvando dados na pasta Dados_B9 ...");
         pc->saveImage(image_ptr->image, "camera_rgb");

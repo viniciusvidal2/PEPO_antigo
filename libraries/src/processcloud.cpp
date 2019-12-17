@@ -108,7 +108,7 @@ void ProcessCloud::colorCloudThroughDistance(PointCloud<PointTN>::Ptr nuvem){
     }
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
-void ProcessCloud::createVirtualLaserImage(PointCloud<PointTN>::Ptr nuvem){
+void ProcessCloud::transformToCameraFrame(PointCloud<PointTN>::Ptr nuvem){
     // Rotacionar a nuvem para cair no frame da câmera (laser tem X para frente, câmera deve ter
     // Z para frente e X para o lado
     Eigen::Matrix3f R;
@@ -116,6 +116,9 @@ void ProcessCloud::createVirtualLaserImage(PointCloud<PointTN>::Ptr nuvem){
     Eigen::Matrix4f T = Eigen::Matrix4f::Identity();     // Matriz de transformaçao homogenea
     T.block<3, 3>(0, 0) = R;                             // Adiciona a rotacao onde deve estar
     transformPointCloudWithNormals(*nuvem, *nuvem, T);
+}
+/////////////////////////////////////////////////////////////////////////////////////////////////
+void ProcessCloud::createVirtualLaserImage(PointCloud<PointTN>::Ptr nuvem, string nome){
     // Projetar os pontos na foto virtual e colorir imagem
     cv::Mat fl(cv::Size(cam_w, cam_h), CV_8UC3, cv::Scalar(100, 100, 100)); // Mesmas dimensoes que a camera tiver
     #pragma omp parallel for num_threads(100)
@@ -135,7 +138,7 @@ void ProcessCloud::createVirtualLaserImage(PointCloud<PointTN>::Ptr nuvem){
         }
     }
     // Salva de uma vez a foto do laser
-    saveImage(fl, "camera_virtual");
+    saveImage(fl, nome);
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
 void ProcessCloud::saveCloud(PointCloud<PointTN>::Ptr nuvem){

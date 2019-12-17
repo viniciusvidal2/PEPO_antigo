@@ -21,12 +21,12 @@ void Clusters::obtainPlanes(PointCloud<PointTN>::Ptr in, vector<PointCloud<Point
     seg.setModelType(SACMODEL_PLANE);
     seg.setMethodType(SAC_RANSAC);
     seg.setMaxIterations(100);
-    seg.setDistanceThreshold (0.02);
+    seg.setDistanceThreshold (0.1);
     // Processar planos ate cansar
     PointCloud<PointTN>::Ptr temp (new PointCloud<PointTN>), plane (new PointCloud<PointTN>), cloud_f (new PointCloud<PointTN>);
     *temp = *in;
     int nr_points = (int) temp->points.size();
-    while(temp->size() > 0.3*nr_points){ // Ainda podem haver planos significativos
+    while(temp->size() > 0.5*nr_points){ // Ainda podem haver planos significativos
         seg.setInputCloud(temp);
         seg.segment(*inliers, *coefficients);
         if (inliers->indices.size() == 0){
@@ -47,23 +47,24 @@ void Clusters::obtainPlanes(PointCloud<PointTN>::Ptr in, vector<PointCloud<Point
         // Adiciona ao vetor o plano obtido
         planos.push_back(*plane);
     }
+    // Passar o que sobrou sem planos para a funcao principal
+    *out = *temp;
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
 void Clusters::extractClusters(PointCloud<PointTN>::Ptr in, vector<PointCloud<PointTN>> &clust){
 
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
-void Clusters::colorClouds(vector<PointCloud<PointTN>> &clouds){
-    #pragma omp parallel for
-    for(size_t i=0; i < clouds.size(); i++){
-        // Definir cor de forma aleatoria
-        int intensidade = (rand() % (230 - 40)) + 40;
-        #pragma omp for num_threads(int(clouds[i].size()/10))
-        for(size_t j=0; j < clouds[i].size(); j++){
-            clouds[i].points[j].r = intensidade;
-            clouds[i].points[j].g = intensidade;
-            clouds[i].points[j].b = intensidade;
-        }
+void Clusters::colorCloud(PointCloud<PointTN>::Ptr cloud){
+    // Definir cor de forma aleatoria
+    int int_r = int(int((rand()) % (250 - 40)) + 40);
+    int int_g = int(int((rand()) % (250 - 40)) + 40);
+    int int_b = int(int((rand()) % (250 - 40)) + 40);
+    #pragma omp for num_threads(int(cloud.size()/10))
+    for(size_t j=0; j < cloud->size(); j++){
+        cloud->points[j].r = int_r;
+        cloud->points[j].g = int_g;
+        cloud->points[j].b = int_b;
     }
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
