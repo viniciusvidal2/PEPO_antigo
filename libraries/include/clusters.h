@@ -20,6 +20,7 @@
 #include <pcl/sample_consensus/model_types.h>
 #include <pcl/segmentation/sac_segmentation.h>
 #include <pcl/segmentation/extract_clusters.h>
+#include <pcl/segmentation/region_growing.h>
 
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -36,6 +37,7 @@
 ///
 using namespace pcl;
 using namespace pcl::io;
+using namespace pcl::search;
 using namespace cv;
 using namespace std;
 typedef PointXYZRGB       PointT ;
@@ -48,8 +50,8 @@ public:
     Clusters();
     virtual ~Clusters();
     void obtainPlanes(PointCloud<PointTN>::Ptr in, vector<PointCloud<PointTN>> &planos, PointCloud<PointTN>::Ptr out);
-    void extractClusters(PointCloud<PointTN>::Ptr in, vector<PointCloud<PointTN>> &clust);
-    void colorCloud(PointCloud<PointTN>::Ptr cloud);
+    void extractClustersRegionGrowing(PointCloud<PointTN>::Ptr in, vector<PointCloud<PointTN>> &clust);
+    void colorCloud(vector<PointCloud<PointTN>> &clouds);
 };
 
 #endif // CLUSTERS_H
