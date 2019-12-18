@@ -51,7 +51,7 @@ public:
     virtual ~Clusters();
     void obtainPlanes(PointCloud<PointTN>::Ptr in, vector<PointCloud<PointTN>> &planos, PointCloud<PointTN>::Ptr out);
     void extractClustersRegionGrowing(PointCloud<PointTN>::Ptr in, vector<PointCloud<PointTN>> &clust);
-    void colorCloud(vector<PointCloud<PointTN>> &clouds);
+    void colorCloud(PointCloud<PointTN>::Ptr cloud);
 };
 
 #endif // CLUSTERS_H

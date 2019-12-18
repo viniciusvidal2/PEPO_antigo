@@ -79,10 +79,19 @@ int main(int argc, char **argv)
     ROS_INFO("Foram obtidos %zu clusters", vetor_clusters.size());
 
     // Colore nuvem de pontos cada qual com sua cor aleatoria
-    ROS_INFO("Colorindo planos ...");
-    cl.colorCloud(vetor_planos  );
-    ROS_INFO("Colorindo clusters ...");
-    cl.colorCloud(vetor_clusters);
+        PointCloud<PointTN>::Ptr temp (new PointCloud<PointTN>);
+        for(size_t i=0; i < vetor_planos.size(); i++){
+            ROS_INFO("Colorindo plano %zu de %zu ...", i+1, vetor_planos.size());
+            *temp = vetor_planos[i];
+            cl.colorCloud(temp);
+            vetor_planos[i] = *temp;
+        }
+        for(size_t i=0; i < vetor_clusters.size(); i++){
+            ROS_INFO("Colorindo cluster %zu de %zu ...", i+1, vetor_clusters.size());
+            *temp = vetor_clusters[i];
+            cl.colorCloud(temp);
+            vetor_clusters[i] = *temp;
+        }
 
     // Acumula nuvem final
     ROS_INFO("Acumulando clusters apos processo ...");

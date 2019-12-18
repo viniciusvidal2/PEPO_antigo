@@ -89,18 +89,16 @@ void Clusters::extractClustersRegionGrowing(PointCloud<PointTN>::Ptr in, vector<
     }
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
-void Clusters::colorCloud(vector<PointCloud<PointTN>> &clouds){
-    for(size_t j=0; j<clouds.size(); j++){
-        // Definir cor de forma aleatoria
-        int int_r = int(int((rand()) % (250 - 40)) + 40);
-        int int_g = int(int((rand()) % (250 - 40)) + 40);
-        int int_b = int(int((rand()) % (250 - 40)) + 40);
-        #pragma omp for num_threads(int(cloud.size()/10))
-        for(size_t j=0; j < clouds.size(); j++){
-            clouds[j].points[j].r = int_r;
-            clouds[j].points[j].g = int_g;
-            clouds[j].points[j].b = int_b;
-        }
+void Clusters::colorCloud(PointCloud<PointTN>::Ptr cloud){
+    // Definir cor de forma aleatoria
+    int int_r = int(int((rand()) % (250 - 40)) + 40);
+    int int_g = int(int((rand()) % (250 - 40)) + 40);
+    int int_b = int(int((rand()) % (250 - 40)) + 40);
+    #pragma omp for num_threads(int(cloud.size()/10))
+    for(size_t j=0; j < cloud->size(); j++){
+        cloud->points[j].r = int_r;
+        cloud->points[j].g = int_g;
+        cloud->points[j].b = int_b;
     }
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
