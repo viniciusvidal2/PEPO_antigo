@@ -20,8 +20,8 @@ void Clusters::obtainPlanes(PointCloud<PointTN>::Ptr in, vector<PointCloud<Point
     seg.setOptimizeCoefficients(true);
     seg.setModelType(SACMODEL_PLANE);
     seg.setMethodType(SAC_RANSAC);
-    seg.setMaxIterations(100);
-    seg.setDistanceThreshold (0.1);
+    seg.setMaxIterations(50);
+    seg.setDistanceThreshold (0.03);
     // Processar planos ate cansar
     PointCloud<PointTN>::Ptr temp (new PointCloud<PointTN>), plane (new PointCloud<PointTN>), cloud_f (new PointCloud<PointTN>);
     *temp = *in;
@@ -61,6 +61,19 @@ void Clusters::extractClustersRegionGrowing(PointCloud<PointTN>::Ptr in, vector<
     normal_estimator.setInputCloud(in);
     normal_estimator.setKSearch(10);
     normal_estimator.compute(*normals);
+    // Forcar virar as normais na marra para a origem
+    Eigen::Vector3f C = Eigen::Vector3f::Zero();
+    for(size_t i=0; i < normals->size(); i++){
+        Eigen::Vector3f normal, cp;
+        normal << normals->points[i].normal_x, normals->points[i].normal_y, normals->points[i].normal_z;
+        cp     << C(0) - in->points[i].x     , C(1) - in->points[i].y     , C(2) - in->points[i].z     ;
+        float cos_theta = (normal.dot(cp))/(normal.norm()*cp.norm());
+        if(cos_theta <= 0){ // Esta apontando errado, deve inverter
+            normals->points[i].normal_x = -normals->points[i].normal_x;
+            normals->points[i].normal_y = -normals->points[i].normal_y;
+            normals->points[i].normal_z = -normals->points[i].normal_z;
+        }
+    }
     // Iniciando o objeto de calculo da regiao e inserindo parametros
     RegionGrowing<PointTN, Normal> reg;
     reg.setSearchMethod(tree);
@@ -69,8 +82,8 @@ void Clusters::extractClustersRegionGrowing(PointCloud<PointTN>::Ptr in, vector<
     reg.setNumberOfNeighbours(50);
     reg.setInputCloud(in);
     reg.setInputNormals(normals);
-    reg.setCurvatureThreshold(60.0);
-    reg.setSmoothnessThreshold(30.0 / 180.0 * M_PI);
+    reg.setCurvatureThreshold(6.0);
+    reg.setSmoothnessThreshold(20.0 / 180.0 * M_PI);
     // Inicia vetor de clusters - pelo indice na nuvem
     vector<PointIndices> clusters_ind;
     reg.extract(clusters_ind);
@@ -89,16 +102,121 @@ void Clusters::extractClustersRegionGrowing(PointCloud<PointTN>::Ptr in, vector<
     }
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
-void Clusters::colorCloud(PointCloud<PointTN>::Ptr cloud){
-    // Definir cor de forma aleatoria
-    int int_r = int(int((rand()) % (250 - 40)) + 40);
-    int int_g = int(int((rand()) % (250 - 40)) + 40);
-    int int_b = int(int((rand()) % (250 - 40)) + 40);
+void Clusters::extractClustersRegionGrowingRGB(PointCloud<PointTN>::Ptr in, vector<PointCloud<PointTN>> &clust){
+    // Criando a KdTree pra todos os metodos
+    search::KdTree<PointTN>::Ptr tree (new search::KdTree<PointTN>);
+    // Separando as normais de entrada da nuvem de uma vez
+    PointCloud<Normal>::Ptr normals (new PointCloud<Normal>);
+    NormalEstimation<PointTN, Normal> normal_estimator;
+    normal_estimator.setSearchMethod(tree);
+    normal_estimator.setInputCloud(in);
+    normal_estimator.setKSearch(10);
+    normal_estimator.compute(*normals);
+    // Forcar virar as normais na marra para a origem
+    Eigen::Vector3f C = Eigen::Vector3f::Zero();
+    for(size_t i=0; i < normals->size(); i++){
+        Eigen::Vector3f normal, cp;
+        normal << normals->points[i].normal_x, normals->points[i].normal_y, normals->points[i].normal_z;
+        cp     << C(0) - in->points[i].x     , C(1) - in->points[i].y     , C(2) - in->points[i].z     ;
+        float cos_theta = (normal.dot(cp))/(normal.norm()*cp.norm());
+        if(cos_theta <= 0){ // Esta apontando errado, deve inverter
+            normals->points[i].normal_x = -normals->points[i].normal_x;
+            normals->points[i].normal_y = -normals->points[i].normal_y;
+            normals->points[i].normal_z = -normals->points[i].normal_z;
+        }
+    }
+    // Iniciando o objeto de calculo da regiao e inserindo parametros
+    RegionGrowingRGB<PointTN, Normal> reg;
+    reg.setSearchMethod(tree);
+    reg.setMinClusterSize(50);
+    reg.setMaxClusterSize(10000000);
+    reg.setNumberOfNeighbours(100);
+    reg.setInputCloud(in);
+    reg.setInputNormals(normals);
+    reg.setCurvatureThreshold(3.0);
+    reg.setSmoothnessThreshold(10.0 / 180.0 * M_PI);
+    reg.setPointColorThreshold(10);
+    reg.setRegionColorThreshold(10);
+    reg.setDistanceThreshold(0.05);
+    // Inicia vetor de clusters - pelo indice na nuvem
+    vector<PointIndices> clusters_ind;
+    reg.extract(clusters_ind);
+    // Passa para o vetor de nuvens da rotina principal
+    clust.resize(clusters_ind.size());
+    ExtractIndices<PointTN> extract;
+    extract.setInputCloud(in);
+    extract.setNegative(false);
+    PointIndices::Ptr temp (new PointIndices);
+    #pragma omp parallel for
+    for(size_t i=0; i<clusters_ind.size(); i++){
+        *temp = clusters_ind[i];
+        extract.setIndices(temp);
+        extract.filter(clust[i]);
+        temp->indices.clear();
+    }
+}
+/////////////////////////////////////////////////////////////////////////////////////////////////
+void Clusters::extractClustersEuclidian(PointCloud<PointTN>::Ptr in, vector<PointCloud<PointTN>> &clust){
+    // Cria arvore de busca e objeto de clusters por distancia euclidiana
+    search::KdTree<PointTN>::Ptr tree (new search::KdTree<PointTN>);
+    EuclideanClusterExtraction<PointTN> eucl;
+    eucl.setInputCloud(in);
+//    eucl.setMaxClusterSize(int(in->size()/2));
+    eucl.setMinClusterSize(50);
+    eucl.setClusterTolerance(0.1);
+    eucl.setSearchMethod(tree);
+    // Inicia vetor de clusters - pelo indice na nuvem
+    vector<PointIndices> clusters_ind;
+    eucl.extract(clusters_ind);
+    // Passa para o vetor de nuvens da rotina principal
+    clust.resize(clusters_ind.size());
+    ExtractIndices<PointTN> extract;
+    extract.setInputCloud(in);
+    extract.setNegative(false);
+    PointIndices::Ptr temp (new PointIndices);
+    #pragma omp parallel for
+    for(size_t i=0; i<clusters_ind.size(); i++){
+        *temp = clusters_ind[i];
+        extract.setIndices(temp);
+        extract.filter(clust[i]);
+        temp->indices.clear();
+    }
+}
+/////////////////////////////////////////////////////////////////////////////////////////////////
+void Clusters::separateClustersByDistance(vector<PointCloud<PointTN> > &clust){
+    // Criar vetor de nuvens interno para cada nuvem em cluster, aplicar o metodo
+    vector<PointCloud<PointTN>> local, tempv;
+    PointCloud<PointTN>::Ptr tempc (new PointCloud<PointTN>);
+    for(size_t i=0; i<clust.size(); i++){
+        // Passa para a funcao de euclidean cluster a nuvem corespondente
+        *tempc = clust[i];
+        this->extractClustersEuclidian(tempc, tempv);
+        // Adiciona ao novo vetor local os resultados
+        local.insert(local.end(), tempv.begin(), tempv.end());
+    }
+    // Forca o vetor global ser igual ao vetor local que foi separado
+    clust.clear(); clust = local;
+}
+/////////////////////////////////////////////////////////////////////////////////////////////////
+void Clusters::setColorPallete(size_t l){
+    // De acordo com o tamanho, dividir o range de cores de 250 e colocar nos vetores
+    pal_r.resize(l); pal_g.resize(l); pal_b.resize(l);
+    for(size_t i=0; i < l; i++)
+        pal_r[i] = pal_g[i] = pal_b[i] = int(250/l * i);
+    // Bagunçar aqui para nao ficar tudo escala de cinza
+    random_shuffle(pal_r.begin(), pal_r.end());
+    random_shuffle(pal_g.begin(), pal_g.end());
+    random_shuffle(pal_b.begin(), pal_b.end());
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+void Clusters::colorCloud(PointCloud<PointTN>::Ptr cloud, size_t i){
+    // Colorir agora com a cor certa na paleta de cores
     #pragma omp for num_threads(int(cloud.size()/10))
     for(size_t j=0; j < cloud->size(); j++){
-        cloud->points[j].r = int_r;
-        cloud->points[j].g = int_g;
-        cloud->points[j].b = int_b;
+        cloud->points[j].r = pal_r[i];
+        cloud->points[j].g = pal_g[i];
+        cloud->points[j].b = pal_b[i];
     }
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////

@@ -21,6 +21,8 @@
 #include <pcl/segmentation/sac_segmentation.h>
 #include <pcl/segmentation/extract_clusters.h>
 #include <pcl/segmentation/region_growing.h>
+#include <pcl/segmentation/region_growing_rgb.h>
+#include <pcl/segmentation/conditional_euclidean_clustering.h>
 
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -51,7 +53,14 @@ public:
     virtual ~Clusters();
     void obtainPlanes(PointCloud<PointTN>::Ptr in, vector<PointCloud<PointTN>> &planos, PointCloud<PointTN>::Ptr out);
     void extractClustersRegionGrowing(PointCloud<PointTN>::Ptr in, vector<PointCloud<PointTN>> &clust);
-    void colorCloud(PointCloud<PointTN>::Ptr cloud);
+    void extractClustersRegionGrowingRGB(PointCloud<PointTN>::Ptr in, vector<PointCloud<PointTN>> &clust);
+    void extractClustersEuclidian(PointCloud<PointTN>::Ptr in, vector<PointCloud<PointTN>> &clust);
+    void separateClustersByDistance(vector<PointCloud<PointTN>> &clust);
+    void setColorPallete(size_t l);
+    void colorCloud(PointCloud<PointTN>::Ptr cloud, size_t i);
+
+private:
+    vector<int> pal_r, pal_g, pal_b;
 };
 
 #endif // CLUSTERS_H
