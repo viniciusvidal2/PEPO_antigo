@@ -46,9 +46,10 @@ int main(int argc, char **argv)
     ros::NodeHandle nh;
 
     // Inicia variaveis
-    PointCloud<PointTN>::Ptr inicial            (new PointCloud<PointTN>);
-    PointCloud<PointTN>::Ptr inicial_sem_planos (new PointCloud<PointTN>);
-    PointCloud<PointTN>::Ptr final              (new PointCloud<PointTN>);
+    PointCloud<PointTN>::Ptr inicial             (new PointCloud<PointTN>);
+    PointCloud<PointTN>::Ptr filtrada            (new PointCloud<PointTN>);
+    PointCloud<PointTN>::Ptr filtrada_sem_planos (new PointCloud<PointTN>);
+    PointCloud<PointTN>::Ptr final               (new PointCloud<PointTN>);
     vector<PointCloud<PointTN>> vetor_planos;
     vector<PointCloud<PointTN>> vetor_clusters;
     Clusters cl;
@@ -64,20 +65,24 @@ int main(int argc, char **argv)
     ROS_INFO("Filtrando por outliers ...");
     StatisticalOutlierRemoval<PointTN> sor;
     sor.setInputCloud(inicial);
-    sor.setMeanK(1);
-    sor.setStddevMulThresh(0.4);
-    sor.filter(*inicial);
+    sor.setMeanK(50);
+    sor.setStddevMulThresh(2);
+    sor.setNegative(false);
+    sor.filter(*filtrada);
+
+    ROS_INFO("Filtrando ruidos radiais ...");
+    pc.filterCloudDepthCovariance(filtrada, 50, 1.5);
 
     // Extrai um vetor de planos e retorna nuvem sem eles
     ROS_INFO("Obtendo planos na nuvem ...");
-    cl.obtainPlanes(inicial, vetor_planos, inicial_sem_planos);
+    cl.obtainPlanes(filtrada, vetor_planos, filtrada_sem_planos);
     cl.separateClustersByDistance(vetor_planos);
     ROS_INFO("Foram obtidos %zu planos.", vetor_planos.size());
 
     // Extrai clusters da nuvem de pontos que restou
     ROS_INFO("Obtendo clusters para o restante da nuvem ...");
-//    cl.extractClustersRegionGrowing(inicial_sem_planos, vetor_clusters);
-//    cl.separateClustersByDistance(vetor_clusters);
+    cl.extractClustersRegionGrowingRGB(filtrada_sem_planos, vetor_clusters);
+    cl.separateClustersByDistance(vetor_clusters);
     ROS_INFO("Foram obtidos %zu clusters.", vetor_clusters.size());
 
     // Definindo paleta de cores de cada plano e cluster
@@ -107,7 +112,7 @@ int main(int argc, char **argv)
 
     // Salva nuvem final
     ROS_INFO("Salvando nuvem final ...");
-    savePLYFileASCII(std::string(home)+"/Desktop/Dados_B9/nuvem_clusters.ply", *final);
+    savePLYFileASCII<PointTN>(std::string(home)+"/Desktop/Dados_B9/nuvem_clusters.ply", *final);
 
     // Projeta na imagem virtual a nuvem inteira
     pc.createVirtualLaserImage(final, "imagem_clusters");

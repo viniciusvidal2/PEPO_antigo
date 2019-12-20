@@ -29,6 +29,8 @@
 #include <pcl/point_types.h>
 #include <pcl/io/ply_io.h>
 #include <pcl_ros/transforms.h>
+#include <pcl/kdtree/kdtree_flann.h>
+#include <pcl/common/common.h>
 #include <pcl/features/normal_3d_omp.h>
 #include <pcl/features/normal_3d.h>
 #include <pcl/filters/conditional_removal.h>
@@ -80,10 +82,12 @@ public:
   void createVirtualLaserImage(PointCloud<PointTN>::Ptr nuvem, std::string nome);
   void saveCloud(PointCloud<PointTN>::Ptr nuvem);
   void saveImage(cv::Mat img, std::string nome);
+  void filterCloudDepthCovariance(PointCloud<PointTN>::Ptr cloud, int kn, float thresh);
 
 private:
   /// Metodos
   float normaldist(float x, float media, float dev);
+  Eigen::Matrix3f euler2matrix(float r, float p, float y);
   /// Variaveis
   Eigen::Matrix3f K_cam; // Parametros intrinsecos da camera
   int cam_w, cam_h;      // Dimensoes da camera

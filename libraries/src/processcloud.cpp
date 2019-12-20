@@ -141,9 +141,63 @@ void ProcessCloud::createVirtualLaserImage(PointCloud<PointTN>::Ptr nuvem, strin
     saveImage(fl, nome);
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
+void ProcessCloud::filterCloudDepthCovariance(PointCloud<PointTN>::Ptr cloud, int kn, float thresh){
+    // Objetos para filtrar
+    ExtractIndices<PointTN> extract;
+    PointIndices::Ptr outliers (new PointIndices);
+    PointCloud<PointTN>::Ptr marcar_outliers (new PointCloud<PointTN>);
+    marcar_outliers->resize(cloud->size());
+    // Objetos para procurar na nuvem o centroide e a covariancia
+    KdTreeFLANN<PointTN>::Ptr tree (new KdTreeFLANN<PointTN>);
+    tree->setInputCloud(cloud);
+    // Varrer todos os pontos atras da covariancia
+    #pragma omp parallel for num_threads(cloud->size()/10)
+    for(size_t i=0; i<cloud->size(); i++){
+        // Cria variaveis aqui dentro pelo processo ser paralelizado
+        Eigen::Vector4f centroide;
+        Eigen::Matrix4f rotacao_radial;
+        Eigen::Matrix3f covariancia;
+        rotacao_radial = Eigen::Matrix4f::Identity();
+        // Calcula angulo para rotacionar a nuvem e cria matriz de rotacao (yaw em torno de Y, pitch em torno de X)
+        float yaw_y   = atan2(cloud->points[i].x, cloud->points[i].z);
+        float pitch_x = atan2(cloud->points[i].x, cloud->points[i].z);
+        Eigen::Matrix3f rot = this->euler2matrix(0, pitch_x, yaw_y);
+        rotacao_radial.block<3,3>(0, 0) << rot.inverse();
+        // Calcula vizinhos mais proximos aqui por raio ou K neighbors
+        vector<int> indices_vizinhos;
+        vector<float> distancias_vizinhos;
+        tree->nearestKSearch(int(i), kn, indices_vizinhos, distancias_vizinhos);
+        // Separa nuvem com esses vizinhos
+        PointCloud<PointTN>::Ptr temp (new PointCloud<PointTN>);
+        temp->resize(indices_vizinhos.size());
+        for(size_t j=0; j<indices_vizinhos.size(); j++){
+            temp->points[j] = cloud->points[ indices_vizinhos[j] ];
+        }
+        // Rotaciona a nuvem separada segundo o raio que sai do centro do laser (origem)
+        transformPointCloudWithNormals(*temp, *temp, rotacao_radial);
+        // Calcula centroide e covariancia da nuvem
+        compute3DCentroid(*temp, centroide);
+        computeCovarianceMatrix(*temp, centroide, covariancia);
+        // Se for muito maior em z que em x e y, considera ruim e marca na nuvem
+        if(covariancia(2, 2) > thresh*covariancia(0, 0) && covariancia(2, 2) > thresh*covariancia(1, 1))
+            marcar_outliers->points[i].x = 1;
+    }
+    // Passa rapidamente para nuvem de indices
+    for(size_t i=0; i<marcar_outliers->size(); i++){
+        if(marcar_outliers->points[i].x == 1)
+            outliers->indices.push_back(i);
+    }
+    // Extrair pontos da nuvem
+    ROS_INFO("Serao extraidos %zu pontos da nuvem, %.2f por cento.", outliers->indices.size(), float(outliers->indices.size())/float(cloud->size()));
+    extract.setInputCloud(cloud);
+    extract.setNegative(true);
+    extract.setIndices(outliers);
+    extract.filter(*cloud);
+}
+/////////////////////////////////////////////////////////////////////////////////////////////////
 void ProcessCloud::saveCloud(PointCloud<PointTN>::Ptr nuvem){
     std::string nome_nuvem = pasta+"nuvem_final.ply";
-    savePLYFileASCII(nome_nuvem, *nuvem);
+    savePLYFileASCII<PointTN>(nome_nuvem, *nuvem);
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
 void ProcessCloud::saveImage(cv::Mat img, string nome){
@@ -154,3 +208,13 @@ void ProcessCloud::saveImage(cv::Mat img, string nome){
 float ProcessCloud::normaldist(float x, float media, float dev){
     return exp( -0.5*((x - media)/dev)*((x - media)/dev) ) / sqrt( 2*M_PI*dev*dev );
 }
+/////////////////////////////////////////////////////////////////////////////////////////////////
+Eigen::Matrix3f ProcessCloud::euler2matrix(float r, float p, float y){
+    Eigen::AngleAxisf roll( r, Eigen::Vector3f::UnitZ());
+    Eigen::AngleAxisf pitch(p, Eigen::Vector3f::UnitX());
+    Eigen::AngleAxisf yaw(  y, Eigen::Vector3f::UnitY());
+    Eigen::Quaternion<float> q = roll*yaw*pitch;
+
+    return q.matrix();
+}
+/////////////////////////////////////////////////////////////////////////////////////////////////

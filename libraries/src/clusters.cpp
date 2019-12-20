@@ -20,13 +20,13 @@ void Clusters::obtainPlanes(PointCloud<PointTN>::Ptr in, vector<PointCloud<Point
     seg.setOptimizeCoefficients(true);
     seg.setModelType(SACMODEL_PLANE);
     seg.setMethodType(SAC_RANSAC);
-    seg.setMaxIterations(50);
+    seg.setMaxIterations(250);
     seg.setDistanceThreshold (0.03);
     // Processar planos ate cansar
     PointCloud<PointTN>::Ptr temp (new PointCloud<PointTN>), plane (new PointCloud<PointTN>), cloud_f (new PointCloud<PointTN>);
     *temp = *in;
     int nr_points = (int) temp->points.size();
-    while(temp->size() > 0.5*nr_points){ // Ainda podem haver planos significativos
+    while(temp->size() > 0.6*nr_points){ // Ainda podem haver planos significativos
         seg.setInputCloud(temp);
         seg.segment(*inliers, *coefficients);
         if (inliers->indices.size() == 0){
@@ -59,7 +59,7 @@ void Clusters::extractClustersRegionGrowing(PointCloud<PointTN>::Ptr in, vector<
     NormalEstimation<PointTN, Normal> normal_estimator;
     normal_estimator.setSearchMethod(tree);
     normal_estimator.setInputCloud(in);
-    normal_estimator.setKSearch(10);
+    normal_estimator.setKSearch(20);
     normal_estimator.compute(*normals);
     // Forcar virar as normais na marra para a origem
     Eigen::Vector3f C = Eigen::Vector3f::Zero();
@@ -110,7 +110,7 @@ void Clusters::extractClustersRegionGrowingRGB(PointCloud<PointTN>::Ptr in, vect
     NormalEstimation<PointTN, Normal> normal_estimator;
     normal_estimator.setSearchMethod(tree);
     normal_estimator.setInputCloud(in);
-    normal_estimator.setKSearch(10);
+    normal_estimator.setKSearch(20);
     normal_estimator.compute(*normals);
     // Forcar virar as normais na marra para a origem
     Eigen::Vector3f C = Eigen::Vector3f::Zero();
@@ -130,14 +130,14 @@ void Clusters::extractClustersRegionGrowingRGB(PointCloud<PointTN>::Ptr in, vect
     reg.setSearchMethod(tree);
     reg.setMinClusterSize(50);
     reg.setMaxClusterSize(10000000);
-    reg.setNumberOfNeighbours(100);
+    reg.setNumberOfNeighbours(50);
     reg.setInputCloud(in);
     reg.setInputNormals(normals);
-    reg.setCurvatureThreshold(3.0);
-    reg.setSmoothnessThreshold(10.0 / 180.0 * M_PI);
-    reg.setPointColorThreshold(10);
-    reg.setRegionColorThreshold(10);
-    reg.setDistanceThreshold(0.05);
+    reg.setCurvatureThreshold(1.0);
+    reg.setSmoothnessThreshold(5.0 / 180.0 * M_PI);
+    reg.setPointColorThreshold(5);
+    reg.setRegionColorThreshold(5);
+    reg.setDistanceThreshold(0.04);
     // Inicia vetor de clusters - pelo indice na nuvem
     vector<PointIndices> clusters_ind;
     reg.extract(clusters_ind);
@@ -161,9 +161,9 @@ void Clusters::extractClustersEuclidian(PointCloud<PointTN>::Ptr in, vector<Poin
     search::KdTree<PointTN>::Ptr tree (new search::KdTree<PointTN>);
     EuclideanClusterExtraction<PointTN> eucl;
     eucl.setInputCloud(in);
-//    eucl.setMaxClusterSize(int(in->size()/2));
+    eucl.setMaxClusterSize(100000000);
     eucl.setMinClusterSize(50);
-    eucl.setClusterTolerance(0.1);
+    eucl.setClusterTolerance(0.05);
     eucl.setSearchMethod(tree);
     // Inicia vetor de clusters - pelo indice na nuvem
     vector<PointIndices> clusters_ind;
@@ -187,13 +187,16 @@ void Clusters::separateClustersByDistance(vector<PointCloud<PointTN> > &clust){
     // Criar vetor de nuvens interno para cada nuvem em cluster, aplicar o metodo
     vector<PointCloud<PointTN>> local, tempv;
     PointCloud<PointTN>::Ptr tempc (new PointCloud<PointTN>);
+    ROS_INFO("A entrada possui %zu clusters.", clust.size());
     for(size_t i=0; i<clust.size(); i++){
         // Passa para a funcao de euclidean cluster a nuvem corespondente
         *tempc = clust[i];
         this->extractClustersEuclidian(tempc, tempv);
+        ROS_INFO("O cluster %zu virou %zu clusters.", i+1, tempv.size());
         // Adiciona ao novo vetor local os resultados
         local.insert(local.end(), tempv.begin(), tempv.end());
     }
+    ROS_INFO("Local saiu com %zu clusters.", local.size());
     // Forca o vetor global ser igual ao vetor local que foi separado
     clust.clear(); clust = local;
 }
