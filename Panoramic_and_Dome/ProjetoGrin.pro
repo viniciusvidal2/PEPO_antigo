@@ -33,6 +33,9 @@ LIBS += -L/"C:/home/grin/opencv-3.1.0/release/lib/libopencv_calib3d300.dll.a"
 LIBS += -lopencv_core
 LIBS += -lopencv_imgproc
 LIBS += -lopencv_highgui
+LIBS +=  -lopencv_stitching
+LIBS += -lopencv_calib3d
+LIBS += -L/usr/local/lib -lopencv_core -lopencv_imgcodecs -lopencv_highgui -lopencv_xfeatures2d -lopencv_features2d
 
 LIBS +=  -lopencv_stitching
 
