@@ -115,7 +115,10 @@ int main(int argc, char **argv)
     savePLYFileASCII<PointTN>(std::string(home)+"/Desktop/Dados_B9/nuvem_clusters.ply", *final);
 
     // Projeta na imagem virtual a nuvem inteira
+    ROS_INFO("Projetando imagem da camera virtual ...");
     pc.createVirtualLaserImage(final, "imagem_clusters");
+
+    ROS_INFO("Processo finalizado.");
 
     return 0;
 }

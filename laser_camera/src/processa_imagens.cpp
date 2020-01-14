@@ -38,7 +38,7 @@ int main(int argc, char **argv)
 
     /// Iniciar classe de processamento de dados
     std::string pasta  = "/home/grin/Desktop/Dados_B9/";
-    std::string im_rgb = "camera_rgb.jpg", im_clu = "imagem_clusters.jpg", im_dep = "camera_virtual.jpg";
+    std::string im_rgb = "camera_rgb.jpg", im_clu = "imagem_clusters.png", im_dep = "camera_virtual.jpg";
     OtimizaImagens oi(pasta, im_rgb, im_clu, im_dep);
 
     /// Criar imagens com arestas resultantes
@@ -48,6 +48,16 @@ int main(int argc, char **argv)
     /// Salvar imagens na pasta para olhar se tudo bem
     ROS_INFO("Salvando imagens na pasta %s ...", pasta.c_str());
     oi.saveEdgeImages();
+
+    /// Obter features nas imagens com arestas
+    ROS_INFO("Obtendo features e matches nas imagens com arestas ...");
+    oi.calcAndMatchFeatures();
+
+    /// Calcular relacao entre as imagens (matriz de transformação homogenea)
+    ROS_INFO("Calculando relacao entre as imagens ...");
+
+    /// Colorir nuvem com as cores certas e bora la
+    ROS_INFO("Colorindo a nuvem de entrada com cores reais ...");
 
     ROS_INFO("Processo finalizado.");
     ros::spinOnce();

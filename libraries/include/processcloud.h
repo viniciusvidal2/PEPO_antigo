@@ -88,6 +88,8 @@ private:
   /// Metodos
   float normaldist(float x, float media, float dev);
   Eigen::Matrix3f euler2matrix(float r, float p, float y);
+  Mat correctColorCluster(Mat in);
+  Vec3b findPredominantColor(int u, int v, Mat in, int desvio);
   /// Variaveis
   Eigen::Matrix3f K_cam; // Parametros intrinsecos da camera
   int cam_w, cam_h;      // Dimensoes da camera
