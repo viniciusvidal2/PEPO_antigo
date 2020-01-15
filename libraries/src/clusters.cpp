@@ -161,8 +161,8 @@ void Clusters::extractClustersEuclidian(PointCloud<PointTN>::Ptr in, vector<Poin
     search::KdTree<PointTN>::Ptr tree (new search::KdTree<PointTN>);
     EuclideanClusterExtraction<PointTN> eucl;
     eucl.setInputCloud(in);
-    eucl.setMaxClusterSize(100000000);
-    eucl.setMinClusterSize(50);
+    eucl.setMaxClusterSize(int(in->size()*2));
+    eucl.setMinClusterSize(int(in->size()/4));
     eucl.setClusterTolerance(0.05);
     eucl.setSearchMethod(tree);
     // Inicia vetor de clusters - pelo indice na nuvem
@@ -205,7 +205,7 @@ void Clusters::setColorPallete(size_t l){
     // De acordo com o tamanho, dividir o range de cores de 250 e colocar nos vetores
     pal_r.resize(l); pal_g.resize(l); pal_b.resize(l);
     for(size_t i=0; i < l; i++)
-        pal_r[i] = pal_g[i] = pal_b[i] = int(250/l * i);
+        pal_r[i] = pal_g[i] = pal_b[i] = int(20 + 230/l*i);
     // Bagunçar aqui para nao ficar tudo escala de cinza
     random_shuffle(pal_r.begin(), pal_r.end());
     random_shuffle(pal_g.begin(), pal_g.end());

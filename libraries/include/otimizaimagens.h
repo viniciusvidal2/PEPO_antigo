@@ -28,11 +28,14 @@ public:
   void calculateEdgesOnImages();
   void saveEdgeImages();
   void calcAndMatchFeatures();
+  void adjustImagesKeyboard();
 
 private:
   // Métodos
   Mat correctColorCluster(Mat in);
   Vec3b findPredominantColor(int u, int v, Mat in, int desvio);
+  Mat calculateBlobs(Mat in);
+  Mat calculateContours(Mat in);
 
   // Arquivos de imagem
   std::string pasta, arquivo_cam, arquivo_clusters, arquivo_depth;

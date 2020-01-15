@@ -120,7 +120,7 @@ void ProcessCloud::transformToCameraFrame(PointCloud<PointTN>::Ptr nuvem){
 /////////////////////////////////////////////////////////////////////////////////////////////////
 void ProcessCloud::createVirtualLaserImage(PointCloud<PointTN>::Ptr nuvem, string nome){
     // Projetar os pontos na foto virtual e colorir imagem
-    cv::Mat fl(cv::Size(cam_w, cam_h), CV_8UC3, cv::Scalar(100, 100, 100)); // Mesmas dimensoes que a camera tiver
+    cv::Mat fl(cv::Size(cam_w, cam_h), CV_8UC3, cv::Scalar(0, 0, 0)); // Mesmas dimensoes que a camera tiver
     #pragma omp parallel for num_threads(100)
     for(size_t i = 0; i < nuvem->size(); i++){
         /// Pegar ponto em coordenadas normais
@@ -232,7 +232,7 @@ Mat ProcessCloud::correctColorCluster(Mat in){
         for(int v=0+lim; v<in.rows-lim; v++){
             // Se for cinza, varrer os vizinhos
             Vec3b cor = in.at<Vec3b>(Point(u, v));
-            if(cor.val[0] == 100 && cor.val[1] == 100 && cor.val[2] == 100){ // A imagem criada tem esse valor para pixels nao projetados
+            if(cor.val[0] == 0 && cor.val[1] == 0 && cor.val[2] == 0){ // A imagem criada tem esse valor para pixels nao projetados
                 // Encontrar a moda dos vizinhos: quem tiver mais de tal cor ganha e essa cor e atribuida ao pixel central
                 Vec3b cor_moda = findPredominantColor(u, v, in, lim);
                 // Atribuir cor encontrada para o pixel em questao

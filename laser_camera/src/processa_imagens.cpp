@@ -51,7 +51,11 @@ int main(int argc, char **argv)
 
     /// Obter features nas imagens com arestas
     ROS_INFO("Obtendo features e matches nas imagens com arestas ...");
-    oi.calcAndMatchFeatures();
+//    oi.calcAndMatchFeatures();
+
+    /// Movendo uma imagem sobre a outra com as setas
+    ROS_INFO("Movendo uma imagem com arestas sobre a outra com o teclado");
+    oi.adjustImagesKeyboard();
 
     /// Calcular relacao entre as imagens (matriz de transformação homogenea)
     ROS_INFO("Calculando relacao entre as imagens ...");
