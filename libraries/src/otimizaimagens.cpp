@@ -1,17 +1,28 @@
 #include "../include/otimizaimagens.h"
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
-OtimizaImagens::OtimizaImagens(string p, string icam, string iclu, string id):pasta(p),
-    arquivo_cam(icam), arquivo_clusters(iclu), arquivo_depth(id)
+OtimizaImagens::OtimizaImagens(string p, string icam, string iclu, string id, string dist):pasta(p),
+    arquivo_cam(icam), arquivo_clusters(iclu), arquivo_depth(id), arquivo_distancias(dist)
 {
     // Lendo imagens de uma vez
-    im_cam      = imread((pasta+arquivo_cam).c_str()     );
-    im_clusters = imread((pasta+arquivo_clusters).c_str());
-    im_depth    = imread((pasta+arquivo_depth).c_str()   );
+    im_cam      = imread((pasta+arquivo_cam).c_str()       );
+    im_clusters = imread((pasta+arquivo_clusters).c_str()  );
+    im_depth    = imread((pasta+arquivo_depth).c_str()     );
+    im_dist     = imread((pasta+arquivo_distancias).c_str());
     // Inicia as matrizes para as imagens com arestas
     ed_cam.create(      im_cam.size()     , im_cam.type()      );
     ed_clusters.create( im_clusters.size(), im_clusters.type() );
     ed_depth.create(    im_depth.size()   , im_depth.type()    );
+    // Remove a distorcao da imagem da camera com os parametros da calibracao
+    Mat params = (Mat_<double>(1,5) << 0.113092, -0.577590, 0.005000, -0.008206, 0.000000);
+    Mat K      = (Mat_<double>(3,3) << 1484.701399,    0.000000, 432.741036,
+                                          0.000000, 1477.059238, 412.362072,
+                                          0.000000,    0.000000,   1.000000);
+    Mat temp;
+    undistort(im_cam, temp, K, params);
+    temp.copyTo(im_cam);
+    // Salva os focos iniciais do laser para otimizacao da projecao
+    fx_l = K.at<double>(Point(0, 0)); fy_l = K.at<double>(Point(1, 1));
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
 OtimizaImagens::~OtimizaImagens(){
@@ -54,8 +65,8 @@ void OtimizaImagens::calculateEdgesOnImages(){
 //    im_clusters.copyTo(ed_clusters, mask_clusters);
 //    im_depth.copyTo(   ed_depth   , mask_depth   );
     // Mostrar resultado
-    imshow("RGB", ed_cam);
-    imshow("Clusters", ed_clusters);
+//    imshow("RGB", ed_cam);
+//    imshow("Clusters", ed_clusters);
 //    imshow("Depth", ed_depth);
     waitKey(0);
 }
@@ -188,32 +199,27 @@ void OtimizaImagens::calcAndMatchFeatures(){
                 imgRightPts.push_back(keypoints_clusters[good_matches[i].trainIdx].pt);
         }
 
-//        if(imgLeftPts.size() > 0){
-//            cv::Mat inliers;
-//            cv::Mat Ka = (cv::Mat_<double>(3, 3) << 1484.701399, 0.0, 432.741036, 0.0, 1477.059238, 412.362072, 0.0, 0.0, 1.0);
-//            cv::Mat E = findEssentialMat(imgLeftPts, imgRightPts, Ka, CV_RANSAC, 0.99999, 1.0, inliers);
+        if(imgLeftPts.size() > 0){
+            cv::Mat inliers;
+            cv::Mat Ka = (cv::Mat_<double>(3, 3) << 1484.701399, 0.0, 432.741036, 0.0, 1477.059238, 412.362072, 0.0, 0.0, 1.0);
+            cv::Mat E = findEssentialMat(imgLeftPts, imgRightPts, Ka, CV_RANSAC, 0.99999, 1.0, inliers);
 
-//            std::vector<cv::KeyPoint> goodKeypointsCamTemp;
-//            std::vector<cv::KeyPoint> goodKeypointsClusterTemp;
-//            bool dx = false, dy = false;
-//            for (size_t i = 0; i < inliers.rows; i++){
-//                if (inliers.at<uchar>(i, 0) == 1 && dx && dy){
-//                    goodKeypointsCamTemp.push_back(goodKeypointsCam.at(i));
-//                    goodKeypointsClusterTemp.push_back(goodKeypointsCluster.at(i));
-//                }
-//            }
-//            goodKeypointsCam     = goodKeypointsCamTemp;
-//            goodKeypointsCluster = goodKeypointsClusterTemp;
-//        }
-
-//        cout << endl << goodKeypointsCam.size() << endl;
+            std::vector<cv::KeyPoint> goodKeypointsCamTemp;
+            std::vector<cv::KeyPoint> goodKeypointsClusterTemp;
+            bool dx = false, dy = false;
+            for (size_t i = 0; i < inliers.rows; i++){
+                if (inliers.at<uchar>(i, 0) == 1 && dx && dy){
+                    goodKeypointsCamTemp.push_back(goodKeypointsCam.at(i));
+                    goodKeypointsClusterTemp.push_back(goodKeypointsCluster.at(i));
+                }
+            }
+            goodKeypointsCam     = goodKeypointsCamTemp;
+            goodKeypointsCluster = goodKeypointsClusterTemp;
+        }
 
     } // fim do while
 
     if(goodKeypointsCam.size()){
-//        char* home;
-//        home = getenv("HOME");
-//        std::string pasta = std::string(home)+"/Desktop/teste/";
         Mat c, cl;
         im_cam.copyTo(c); im_depth.copyTo(cl);
         for(size_t i=0; i<goodKeypointsCam.size(); i++){
@@ -224,9 +230,6 @@ void OtimizaImagens::calcAndMatchFeatures(){
         imshow("Features camera", c);
         imshow("Features clusters", cl);
         waitKey(0);
-//        std::string foto_zed = pasta+"fotozed.jpeg", foto_astra = pasta+"fotoastra.jpeg";
-//        imwrite(foto_astra, a);
-//        imwrite(foto_zed,   z);
     }
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -285,6 +288,8 @@ void OtimizaImagens::adjustImagesKeyboard(){
     int t;
     // Offsets em X e Y e passo em pixels de deslocamento
     int offx = 0, offy = 0, passo = 5;
+    // Foco anterior e foco atual em X e Y
+    float fx_p = fx_l, fy_p = fy_l, fx_c = fx_l, fy_c = fy_l;
     // Comeca a soma de imagens
     Mat aux;
     ed_clusters.copyTo(aux);
@@ -295,36 +300,85 @@ void OtimizaImagens::adjustImagesKeyboard(){
     while(t != 32){ // espaco acaba tudo
         t = waitKey(0);
         switch(t){
-        case 81: // seta esquerda
+        case 99: // letra c, para esquerda
             offx -= passo;
             break;
-        case 82: // seta cima
-            offy += passo;
-            break;
-        case 83: // seta direita
-            offx += passo;
-            break;
-        case 84: // seta baixo
+        case 102: // letra f, para cima
             offy -= passo;
             break;
-        case 97:  // letra A
+        case 98: // letra b, para direita
+            offx += passo;
+            break;
+        case 118: // letra v, para baixo
+            offy += passo;
+            break;
+        case 97:  // letra a, reduz passo
             if(passo > 2)
                 passo -= 1;
             break;
-        case 115: // letra S
+        case 115: // letra s, aumenta passo
             passo += 1;
+            break;
+        case 105: // letra i, diminui foco em X
+            fx_c -= passo;
+            break;
+        case 111: // letra o, aumenta o foco em X
+            fx_c += passo;
+            break;
+        case 107: // letra k, diminui o foco em Y
+            fy_c -= passo;
+            break;
+        case 108: // letra l, aumenta o foco em Y
+            fy_c += passo;
             break;
         default:
             break;
         }
+        // Altera imagens com novos focos e atualiza valores dos focos
+        ed_clusters = adjustImageByFocus(ed_clusters, fx_c/fx_p, fy_c/fy_p);
+        fx_p = fx_c; fy_p = fy_c;
+        ed_clusters.copyTo(aux); // A principio para nao depender do offset
         // Cria a matriz com os offsets e desloca a danada dos clusters
-        if(offx != 0 && offy != 0){
+        if(offx != 0 || offy != 0){
           Mat H = (cv::Mat_<double>(3,3) << 1, 0, offx, 0, 1, offy, 0, 0, 1);
           warpPerspective(ed_clusters, aux, H, ed_clusters.size(), cv::INTER_LINEAR, cv::BORDER_CONSTANT, Scalar(0, 0, 0));
         }
         addWeighted(ed_cam, 1.0, aux, 1.0, 0.0, soma);
         imshow("Ajuste teclado", soma);
-        cout << "\nOffset X: " << offx << "    Offset Y: " << offy << "    Passo : " << passo << endl;
+        cout << "\nOffset X: " << offx << "    Offset Y: " << offy << "    Passo: " << passo << "    Foco X: " << fx_c << endl;
     }
+}
+/////////////////////////////////////////////////////////////////////////////////////////////////
+Mat OtimizaImagens::adjustImageByFocus(Mat in, float fx_r, float fy_r){
+    // Procura os pixels que nao sao 0, tem distancia, na matriz de distancias
+    Mat temp_edge = Mat::zeros(in.size()     , in.type()     );
+    Mat temp_dist = Mat::zeros(im_dist.size(), im_dist.type());
+    cout << fx_r << "   " << fy_r << endl;
+    #pragma omp parallel for num_threads(100)
+    for(int i=0; i<in.cols; i++){
+        for(int j=0; j<in.rows; j++){
+            // Se ha distancia, recalcular a posicao (u, v) daquele pixel na imagem de arestas do laser
+            unsigned short dist_pixel = im_dist.at<unsigned short>(Point(i, j));
+            float dist_float = static_cast<float>(dist_pixel) / 1000.0;
+//            if(dist_pixel > 0){
+                // Pegar a posicao antiga e achar uma nova com a taxa entre os focos
+                float u = float(i) * fx_r;// * dist_float;
+                float v = float(j) * fy_r;// * dist_float;
+                // Se cair dentro das dimensoes das imagens, prosseguir
+                if(u > 0 && u < in.cols && v > 0 && v < in.rows){
+                    // Alterar na nova imagem de arestas
+                    temp_edge.at<Vec3b>(Point(int(u),int(v)))          = in.at<Vec3b>(Point(i,j));
+                    // Alterar na nova imagem de distancias, para seguir a perseguicao na proxima iteracao
+                    temp_dist.at<unsigned short>(Point(int(u),int(v))) = dist_pixel;
+                }
+//            }
+        }
+    }
+
+    // Renovar a imagem de distancias de dentro da classe
+    temp_dist.copyTo(im_dist);
+
+    // Retornar a imagem temporaria de arestas nova
+    return temp_edge;
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////

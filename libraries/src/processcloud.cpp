@@ -119,8 +119,10 @@ void ProcessCloud::transformToCameraFrame(PointCloud<PointTN>::Ptr nuvem){
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
 void ProcessCloud::createVirtualLaserImage(PointCloud<PointTN>::Ptr nuvem, string nome){
+    // Imagem com as distancias para serem usadas na otimizacao
+    Mat dists(Size(cam_w, cam_h), CV_16UC1, Scalar(0, 0, 0));
     // Projetar os pontos na foto virtual e colorir imagem
-    cv::Mat fl(cv::Size(cam_w, cam_h), CV_8UC3, cv::Scalar(0, 0, 0)); // Mesmas dimensoes que a camera tiver
+    Mat fl(Size(cam_w, cam_h), CV_8UC3, Scalar(0, 0, 0)); // Mesmas dimensoes que a camera tiver
     #pragma omp parallel for num_threads(100)
     for(size_t i = 0; i < nuvem->size(); i++){
         /// Pegar ponto em coordenadas normais
@@ -130,17 +132,21 @@ void ProcessCloud::createVirtualLaserImage(PointCloud<PointTN>::Ptr nuvem, strin
               nuvem->points[i].z;
         Eigen::MatrixXf X = K_cam*X_;
         X = X/X(2, 0);
-        /// Adicionando ponto na imagem se for o caso de projetado corretamente
-        if(floor(X(0,0)) >= 0 && floor(X(0,0)) < fl.cols && floor(X(1,0)) >= 0 && floor(X(1,0)) < fl.rows){
+        /// Adicionando ponto na imagem se for o caso de projetado corretamente (para otimizacao de foco so funciona a menos de 65 metros)
+        if(floor(X(0,0)) >= 0 && floor(X(0,0)) < fl.cols && floor(X(1,0)) >= 0 && floor(X(1,0)) < fl.rows && X_(2, 0) < 64){
             cv::Vec3b cor;
             cor.val[0] = nuvem->points[i].b; cor.val[1] = nuvem->points[i].g; cor.val[2] = nuvem->points[i].r;
-            fl.at<cv::Vec3b>(cv::Point(int(X(0,0)), int(X(1,0)))) = cor;
+            fl.at<cv::Vec3b>(Point(int(X(0,0)), int(X(1,0)))) = cor;
+            // Salva a distancia que estava naquele pixel
+            dists.at<unsigned short>(Point(int(X(0,0)), int(X(1,0)))) = static_cast<unsigned short>((X_(2, 0)*1000.0)); // Converte para milimetros e pega como inteiro
         }
     }
     // Corrigir os ruidos cinzas antes de salvar
     fl = correctColorCluster(fl);
     // Salva de uma vez a foto do laser
     saveImage(fl, nome);
+    // Salva a foto das distancias
+    saveImage(dists, "distancias");
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
 void ProcessCloud::filterCloudDepthCovariance(PointCloud<PointTN>::Ptr cloud, int kn, float thresh){
