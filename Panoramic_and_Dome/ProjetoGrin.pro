@@ -36,7 +36,6 @@ LIBS += -lopencv_highgui
 LIBS +=  -lopencv_stitching
 LIBS += -lopencv_calib3d
 LIBS += -L/usr/local/lib -lopencv_core -lopencv_imgcodecs -lopencv_highgui -lopencv_xfeatures2d -lopencv_features2d
-
 LIBS +=  -lopencv_stitching
 
 SOURCES += \
@@ -52,3 +51,4 @@ FORMS +=
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
+
