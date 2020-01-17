@@ -1,14 +1,15 @@
 #include "../include/otimizaimagens.h"
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
-OtimizaImagens::OtimizaImagens(string p, string icam, string iclu, string id, string dist):pasta(p),
-    arquivo_cam(icam), arquivo_clusters(iclu), arquivo_depth(id), arquivo_distancias(dist)
+OtimizaImagens::OtimizaImagens(string p, string icam, string iclu, string id, string dist, string oc):pasta(p),
+    arquivo_cam(icam), arquivo_clusters(iclu), arquivo_depth(id), arquivo_distancias(dist), arquivo_nuvem(oc)
 {
     // Lendo imagens de uma vez
     im_cam      = imread((pasta+arquivo_cam).c_str()       );
     im_clusters = imread((pasta+arquivo_clusters).c_str()  );
     im_depth    = imread((pasta+arquivo_depth).c_str()     );
     im_dist     = imread((pasta+arquivo_distancias).c_str());
+    im_nuvem    = imread((pasta+arquivo_nuvem).c_str()     );
     // Inicia as matrizes para as imagens com arestas
     ed_cam.create(      im_cam.size()     , im_cam.type()      );
     ed_clusters.create( im_clusters.size(), im_clusters.type() );
@@ -23,6 +24,10 @@ OtimizaImagens::OtimizaImagens(string p, string icam, string iclu, string id, st
     temp.copyTo(im_cam);
     // Salva os focos iniciais do laser para otimizacao da projecao
     fx_l = K.at<double>(Point(0, 0)); fy_l = K.at<double>(Point(1, 1));
+    vector<Mat> planos;
+    cv::split(im_nuvem, planos);
+    imshow("yy", planos[1]);
+    waitKey(0);
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
 OtimizaImagens::~OtimizaImagens(){
@@ -335,8 +340,10 @@ void OtimizaImagens::adjustImagesKeyboard(){
             break;
         }
         // Altera imagens com novos focos e atualiza valores dos focos
-        ed_clusters = adjustImageByFocus(ed_clusters, fx_c/fx_p, fy_c/fy_p);
+//        ed_clusters = adjustImageByFocus(ed_clusters, fx_c/fx_p, fy_c/fy_p);
+        ed_clusters = adjustImageByProjection(ed_clusters, fx_c, fy_c, offx, offy);
         fx_p = fx_c; fy_p = fy_c;
+        offx = 0; offy = 0; // Se for pra ajustar por projecao
         ed_clusters.copyTo(aux); // A principio para nao depender do offset
         // Cria a matriz com os offsets e desloca a danada dos clusters
         if(offx != 0 || offy != 0){
@@ -382,3 +389,36 @@ Mat OtimizaImagens::adjustImageByFocus(Mat in, float fx_r, float fy_r){
     return temp_edge;
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
+Mat OtimizaImagens::adjustImageByProjection(Mat in, float fx, float fy, float tx, float ty){
+    // Procura os pixels que nao sao 0, tem distancia, na matriz de distancias
+    Mat temp_edge  = Mat::zeros(in.size()      , in.type()     );
+    Mat temp_nuvem = Mat::zeros(im_nuvem.size(), im_nuvem.type());
+    // Loop de teste de projecao
+    #pragma omp parallel for num_threads(100)
+    for(int i=0; i<in.cols; i++){
+        for(int j=0; j<in.rows; j++){
+            // Se ha distancia em Z, recalcular a posicao (u, v) daquele pixel na imagem de arestas do laser
+            Vec3w ponto = im_nuvem.at<Vec3w>(Point(i, j));
+            float X = float(ponto.val[0])/1000.0-3.0, Y = float(ponto.val[1])/1000.0-3.0, Z = float(ponto.val[2])/1000.0-3.0;
+            if(Z > 0){
+                cout << ponto.val[0] << "   " << (X+3)*1000.0  << "   " << X << endl;
+                // Pegar a posicao antiga e achar uma nova com a taxa entre os focos - matriz de projecao desenvolvida
+                float u = fx*(X + tx*0.01)/Z; // trazendo o tx e ty para metros aqui
+                float v = fy*(Y + ty*0.01)/Z;
+                // Se cair dentro das dimensoes das imagens, prosseguir
+                if(u > 0 && u < in.cols && v > 0 && v < in.rows){
+                    // Alterar na nova imagem de arestas
+                    temp_edge.at< Vec3b>(Point(int(u),int(v))) = in.at<Vec3b>(Point(i,j));
+                    // Alterar na nova imagem de distancias, para seguir a perseguicao na proxima iteracao
+                    temp_nuvem.at<Vec3w>(Point(int(u),int(v))) = ponto;
+                }
+            }
+        }
+    }
+
+    // Renovar a imagem da nuvem organizada de dentro da classe
+    temp_nuvem.copyTo(im_nuvem);
+
+    // Retornar a imagem temporaria de arestas nova
+    return temp_edge;
+}

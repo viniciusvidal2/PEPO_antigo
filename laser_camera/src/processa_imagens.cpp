@@ -38,8 +38,8 @@ int main(int argc, char **argv)
 
     /// Iniciar classe de processamento de dados
     std::string pasta  = "/home/grin/Desktop/Dados_B9/";
-    std::string im_rgb = "camera_rgb.jpg", im_clu = "imagem_clusters.png", im_dep = "camera_virtual.jpg", im_dist = "distancias.png";
-    OtimizaImagens oi(pasta, im_rgb, im_clu, im_dep, im_dist);
+    std::string im_rgb = "camera_rgb.jpg", im_clu = "imagem_clusters.png", im_dep = "camera_virtual.jpg", im_dist = "distancias.png", im_nuvem = "nuvem_organizada.png";
+    OtimizaImagens oi(pasta, im_rgb, im_clu, im_dep, im_dist, im_nuvem);
 
     /// Criar imagens com arestas resultantes
     ROS_INFO("Calculando arestas nas imagens ...");

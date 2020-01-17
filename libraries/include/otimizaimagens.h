@@ -41,7 +41,7 @@ typedef PointXYZRGBNormal PointT;
 class OtimizaImagens
 {
 public:
-  OtimizaImagens(std::string p, std::string icam, std::string iclu, std::string id, std::string dist);
+  OtimizaImagens(std::string p, std::string icam, std::string iclu, std::string id, std::string dist, string oc);
   virtual ~OtimizaImagens();
 
   void calculateEdgesOnImages();
@@ -57,11 +57,12 @@ private:
   Mat calculateBlobs(Mat in);
   Mat calculateContours(Mat in);
   Mat adjustImageByFocus(Mat in, float fx_r, float fy_r);
+  Mat adjustImageByProjection(Mat in, float fx, float fy, float tx, float ty);
 
   // Arquivos de imagem
-  std::string pasta, arquivo_cam, arquivo_clusters, arquivo_depth, arquivo_distancias;
+  std::string pasta, arquivo_cam, arquivo_clusters, arquivo_depth, arquivo_distancias, arquivo_nuvem;
   // Imagens fonte para estudo
-  Mat im_cam, im_depth, im_clusters, im_dist;
+  Mat im_cam, im_depth, im_clusters, im_dist, im_nuvem;
   // Imagens com arestas
   Mat ed_cam, ed_depth, ed_clusters;
   // Focos para a imagem virtual do laser a serem otimizados a partir do vindo da camera

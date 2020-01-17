@@ -119,8 +119,9 @@ void ProcessCloud::transformToCameraFrame(PointCloud<PointTN>::Ptr nuvem){
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
 void ProcessCloud::createVirtualLaserImage(PointCloud<PointTN>::Ptr nuvem, string nome){
-    // Imagem com as distancias para serem usadas na otimizacao
+    // Imagem com as distancias para serem usadas na otimizacao e outra com a nuvem inteira
     Mat dists(Size(cam_w, cam_h), CV_16UC1, Scalar(0, 0, 0));
+    Mat oc(   Size(cam_w, cam_h), CV_16UC3, Scalar(0, 0, 0)); // organized cloud
     // Projetar os pontos na foto virtual e colorir imagem
     Mat fl(Size(cam_w, cam_h), CV_8UC3, Scalar(0, 0, 0)); // Mesmas dimensoes que a camera tiver
     #pragma omp parallel for num_threads(100)
@@ -136,9 +137,15 @@ void ProcessCloud::createVirtualLaserImage(PointCloud<PointTN>::Ptr nuvem, strin
         if(floor(X(0,0)) >= 0 && floor(X(0,0)) < fl.cols && floor(X(1,0)) >= 0 && floor(X(1,0)) < fl.rows && X_(2, 0) < 64){
             cv::Vec3b cor;
             cor.val[0] = nuvem->points[i].b; cor.val[1] = nuvem->points[i].g; cor.val[2] = nuvem->points[i].r;
-            fl.at<cv::Vec3b>(Point(int(X(0,0)), int(X(1,0)))) = cor;
+            fl.at<Vec3b>(Point(int(X(0,0)), int(X(1,0)))) = cor;
             // Salva a distancia que estava naquele pixel
-            dists.at<unsigned short>(Point(int(X(0,0)), int(X(1,0)))) = static_cast<unsigned short>((X_(2, 0)*1000.0)); // Converte para milimetros e pega como inteiro
+            dists.at<unsigned short>(Point(int(X(0,0)), int(X(1,0)))) = static_cast<unsigned short>( int((X_(2, 0)+3)*1000.0) ); // Converte para milimetros e pega como inteiro
+            // Salva os valores de X, Y e Z na imagem da nuvem organizada
+            Vec3w P;
+            P.val[0] = static_cast<unsigned short>( int((X_(0, 0)+3)*1000.0) );
+            P.val[1] = static_cast<unsigned short>( int((X_(1, 0)+3)*1000.0) );
+            P.val[2] = static_cast<unsigned short>( int((X_(2, 0)+3)*1000.0) );
+            oc.at<Vec3w>(Point(int(X(0,0)), int(X(1,0)))) = P;
         }
     }
     // Corrigir os ruidos cinzas antes de salvar
@@ -147,6 +154,8 @@ void ProcessCloud::createVirtualLaserImage(PointCloud<PointTN>::Ptr nuvem, strin
     saveImage(fl, nome);
     // Salva a foto das distancias
     saveImage(dists, "distancias");
+    // Salva a imagem com 3 canais para a nuvem organizada
+    saveImage(oc, "nuvem_organizada");
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
 void ProcessCloud::filterCloudDepthCovariance(PointCloud<PointTN>::Ptr cloud, int kn, float thresh){
