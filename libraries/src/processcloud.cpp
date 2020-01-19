@@ -6,8 +6,8 @@ ProcessCloud::ProcessCloud()
     // Dimensoes da camera USB de entrada
     cam_w = 1024; cam_h = 768;
     // Inicia matriz intrinseca da camera USB
-    K_cam << 1484.701399,    0.000000, 432.741036,
-                0.000000, 1477.059238, 412.362072,
+    K_cam << 1484.701399,    0.000000, float(cam_w)/2,//432.741036,
+                0.000000, 1477.059238, float(cam_h)/2,//412.362072,
                 0.000000,    0.000000,   1.000000;
     // Inicia nome da pasta -> criar pasta no Dados_B9 no DESKTOP!
     char* home;
@@ -121,6 +121,7 @@ void ProcessCloud::transformToCameraFrame(PointCloud<PointTN>::Ptr nuvem){
 void ProcessCloud::createVirtualLaserImage(PointCloud<PointTN>::Ptr nuvem, string nome){
     // Imagem com as distancias para serem usadas na otimizacao e outra com a nuvem inteira
     Mat dists(Size(cam_w, cam_h), CV_16UC1, Scalar(0, 0, 0));
+    Mat index(Size(cam_w, cam_h), CV_16UC1, Scalar(0, 0, 0));
     Mat oc(   Size(cam_w, cam_h), CV_16UC3, Scalar(0, 0, 0)); // organized cloud
     // Projetar os pontos na foto virtual e colorir imagem
     Mat fl(Size(cam_w, cam_h), CV_8UC3, Scalar(0, 0, 0)); // Mesmas dimensoes que a camera tiver
@@ -146,6 +147,8 @@ void ProcessCloud::createVirtualLaserImage(PointCloud<PointTN>::Ptr nuvem, strin
             P.val[1] = static_cast<unsigned short>( int((X_(1, 0)+3)*1000.0) );
             P.val[2] = static_cast<unsigned short>( int((X_(2, 0)+3)*1000.0) );
             oc.at<Vec3w>(Point(int(X(0,0)), int(X(1,0)))) = P;
+            // Salva o indice do ponto na imagem de indices - otimizacao
+            index.at<unsigned short>(Point(int(X(0,0)), int(X(1,0)))) = i;
         }
     }
     // Corrigir os ruidos cinzas antes de salvar
@@ -156,6 +159,8 @@ void ProcessCloud::createVirtualLaserImage(PointCloud<PointTN>::Ptr nuvem, strin
     saveImage(dists, "distancias");
     // Salva a imagem com 3 canais para a nuvem organizada
     saveImage(oc, "nuvem_organizada");
+    // Salva a imagem com indices da nuvem de pontos
+    saveImage(index, "indices_da_nuvem");
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
 void ProcessCloud::filterCloudDepthCovariance(PointCloud<PointTN>::Ptr cloud, int kn, float thresh){
@@ -245,7 +250,7 @@ Mat ProcessCloud::correctColorCluster(Mat in){
     #pragma omp parallel for num_threads(100)
     for(int u=0+lim; u<in.cols-lim; u++){
         for(int v=0+lim; v<in.rows-lim; v++){
-            // Se for cinza, varrer os vizinhos
+            // Se for preto, varrer os vizinhos
             Vec3b cor = in.at<Vec3b>(Point(u, v));
             if(cor.val[0] == 0 && cor.val[1] == 0 && cor.val[2] == 0){ // A imagem criada tem esse valor para pixels nao projetados
                 // Encontrar a moda dos vizinhos: quem tiver mais de tal cor ganha e essa cor e atribuida ao pixel central
