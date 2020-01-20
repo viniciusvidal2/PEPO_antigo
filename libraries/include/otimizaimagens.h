@@ -36,8 +36,6 @@ using namespace std;
 using namespace pcl;
 using namespace pcl::io;
 
-typedef PointXYZRGBNormal PointT;
-
 class OtimizaImagens
 {
 public:
@@ -45,9 +43,12 @@ public:
   virtual ~OtimizaImagens();
 
   void calculateEdgesOnImages();
+  Mat calculateEdgeFromOriginalImage(Mat image, string nome);
   void saveEdgeImages();
   void calcAndMatchFeatures();
   void adjustImagesKeyboard();
+
+  Mat getImage(std::string nome);
 
 
 private:

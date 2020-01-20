@@ -37,6 +37,34 @@ OtimizaImagens::~OtimizaImagens(){
 
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
+Mat OtimizaImagens::calculateEdgeFromOriginalImage(Mat image, std::string nome){
+    // Converter imagens para escala de cinza
+    Mat gray;
+    cvtColor(image, gray, CV_BGR2GRAY);
+    // Definir valores para calculos de arestas
+    int low_threshold = 10; // Maximo aqui de 100 pelo site do OpenCV
+    int ratio = 3, kernel_size = 3;
+    // Filtro gaussiano nas imagens para relaxar as mesmas
+    blur(gray, gray, Size(5, 5));
+    // Calcular as arestas sobre as imagens e guardar nas mascaras
+    Mat mask;
+    Canny(gray, mask, low_threshold, ratio*low_threshold, kernel_size);
+    // Calcular contornos na imagem de clusters
+    Mat cont;
+    if(nome == "clusters"){
+        cont = calculateContours(mask);
+    } else if(nome == "rgb") {
+        cont = Scalar::all(0);
+        image.copyTo(cont, mask);
+    }
+    // Mostrar resultado
+    imshow("Contours", cont);
+    waitKey(0);
+    cvDestroyAllWindows();
+
+    return cont;
+}
+/////////////////////////////////////////////////////////////////////////////////////////////////
 void OtimizaImagens::calculateEdgesOnImages(){
     // Corrigindo ruidos na imagem de clusters para calcular melhor edges
     im_clusters = correctColorCluster(im_clusters);
@@ -76,7 +104,7 @@ void OtimizaImagens::calculateEdgesOnImages(){
 //    imshow("RGB", ed_cam);
 //    imshow("Clusters", ed_clusters);
 //    imshow("Depth", ed_depth);
-    waitKey(0);
+//    waitKey(0);
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
 void OtimizaImagens::saveEdgeImages(){
@@ -442,5 +470,11 @@ Mat OtimizaImagens::adjustImageByProjection(Mat in, float fx, float fy, float tx
 
     // Retornar a imagem temporaria de arestas nova
     return temp_edge;
+}
+/////////////////////////////////////////////////////////////////////////////////////////////////
+Mat OtimizaImagens::getImage(string nome){
+    if(nome == "rgb"){
+        return im_cam;
+    }
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
