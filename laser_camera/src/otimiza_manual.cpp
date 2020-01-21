@@ -67,7 +67,8 @@ int main(int argc, char **argv)
     ////////////////////////////////////////////////////////
 
     // Parametros para a funcao de projecao - intrinsecos da camera a principio
-    float fx = 1484.701399, fy = 1477.059238, tx = 0, ty = 0, passo = 5;
+    float fx = 1496.701399, fy = 1475.059238, tx = 2, ty = 9, passo = 5;
+//    float fx = 1484.701399, fy = 1477.059238, tx = 0, ty = 0, passo = 5;
 
     // Projeta a nuvem com a transformacao passada sobre camera virtual
     ROS_INFO("Projetando camera virtual ...");
@@ -146,9 +147,13 @@ int main(int argc, char **argv)
 
     // Se deu certo, colore nuvem com a foto entregue
     ROS_INFO("Projetando nuvem na imagem colorida com valores calibrados ...");
+
+    // Le nuvem inicial, sem clusters, com mais informacao
+    PointCloud<PointTN>::Ptr nuvem_final (new PointCloud<PointTN>);
+    loadPLYFile<PointTN>(std::string(home)+"/Desktop/Dados_B9/nuvem_final.ply", *nuvem_final);
+
     PointCloud<PointTN>::Ptr nuvem_calibrada (new PointCloud<PointTN>);
-    *nuvem_calibrada = *nuvem_clusters;
-    pc.colorCloudWithCalibratedImage(nuvem_calibrada, rgb, fx, fy, tx, ty);
+    pc.colorCloudWithCalibratedImage(nuvem_final, nuvem_calibrada, rgb, fx, fy, tx, ty);
 
     // Salvando a nuvem final para dar uma ideia
     ROS_INFO("Salvando e finalizando ...");

@@ -85,7 +85,7 @@ public:
   void filterCloudDepthCovariance(PointCloud<PointTN>::Ptr cloud, int kn, float thresh);
 
   Mat projectCloudToLaserCenter(PointCloud<PointTN>::Ptr cloud, float fx, float fy, float tx, float ty, Size s);
-  void colorCloudWithCalibratedImage(PointCloud<PointTN>::Ptr cloud, Mat image, float fx, float fy, float tx, float ty);
+  void colorCloudWithCalibratedImage(PointCloud<PointTN>::Ptr cloud_in, PointCloud<PointTN>::Ptr cloud_out, Mat image, float fx, float fy, float tx, float ty);
 
 private:
   /// Metodos
