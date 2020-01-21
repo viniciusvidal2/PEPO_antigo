@@ -84,6 +84,9 @@ public:
   void saveImage(cv::Mat img, std::string nome);
   void filterCloudDepthCovariance(PointCloud<PointTN>::Ptr cloud, int kn, float thresh);
 
+  Mat projectCloudToLaserCenter(PointCloud<PointTN>::Ptr cloud, float fx, float fy, float tx, float ty, Size s);
+  void colorCloudWithCalibratedImage(PointCloud<PointTN>::Ptr cloud, Mat image, float fx, float fy, float tx, float ty);
+
 private:
   /// Metodos
   float normaldist(float x, float media, float dev);

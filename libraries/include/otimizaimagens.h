@@ -49,11 +49,10 @@ public:
   void adjustImagesKeyboard();
 
   Mat getImage(std::string nome);
-
+  Mat correctColorCluster(Mat in);
 
 private:
   // Métodos
-  Mat correctColorCluster(Mat in);
   Vec3b findPredominantColor(int u, int v, Mat in, int desvio);
   Mat calculateBlobs(Mat in);
   Mat calculateContours(Mat in);

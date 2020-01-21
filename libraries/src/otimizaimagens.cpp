@@ -45,7 +45,11 @@ Mat OtimizaImagens::calculateEdgeFromOriginalImage(Mat image, std::string nome){
     int low_threshold = 10; // Maximo aqui de 100 pelo site do OpenCV
     int ratio = 3, kernel_size = 3;
     // Filtro gaussiano nas imagens para relaxar as mesmas
-    blur(gray, gray, Size(5, 5));
+    if(nome == "clusters"){
+        blur(gray, gray, Size(3, 3));
+    } else if(nome == "rgb"){
+        blur(gray, gray, Size(5, 5));
+    }
     // Calcular as arestas sobre as imagens e guardar nas mascaras
     Mat mask;
     Canny(gray, mask, low_threshold, ratio*low_threshold, kernel_size);
@@ -57,10 +61,6 @@ Mat OtimizaImagens::calculateEdgeFromOriginalImage(Mat image, std::string nome){
         cont = Scalar::all(0);
         image.copyTo(cont, mask);
     }
-    // Mostrar resultado
-    imshow("Contours", cont);
-    waitKey(0);
-    cvDestroyAllWindows();
 
     return cont;
 }

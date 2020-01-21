@@ -163,6 +163,77 @@ void ProcessCloud::createVirtualLaserImage(PointCloud<PointTN>::Ptr nuvem, strin
     saveImage(index, "indices_da_nuvem");
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
+Mat ProcessCloud::projectCloudToLaserCenter(PointCloud<PointTN>::Ptr cloud, float fx, float fy, float tx, float ty, Size s){
+    Mat image = Mat::zeros(s, CV_8UC3);
+    // Matriz intrinseca e extrinseca
+    Eigen::Matrix3f K;
+    K << fx,  0, s.width /2.0,
+          0, fy, s.height/2.0,
+          0,  0,      1      ;
+    Eigen::MatrixXf Rt(3, 4);
+    Rt << 1, 0, 0, tx/100.0,
+          0, 1, 0, ty/100.0,
+          0, 0, 1,    0    ;
+    Eigen::MatrixXf P(3, 4);
+    P = K*Rt;
+#pragma omp parallel for num_threads(100)
+    for(size_t i = 0; i < cloud->size(); i++){
+        // Pegar ponto em coordenadas homogeneas
+        Eigen::MatrixXf X_(4, 1);
+        X_ << cloud->points[i].x,
+              cloud->points[i].y,
+              cloud->points[i].z,
+                      1         ;
+        Eigen::MatrixXf X(3, 1);
+        X = P*X_;
+        if(X(2, 0) > 0){
+            X = X/X(2, 0);
+            // Adicionando ponto na imagem se for o caso de projetado corretamente
+            if(floor(X(0,0)) > 0 && floor(X(0,0)) < image.cols && floor(X(1,0)) > 0 && floor(X(1,0)) < image.rows){
+                cv::Vec3b cor;
+                cor.val[0] = cloud->points[i].b; cor.val[1] = cloud->points[i].g; cor.val[2] = cloud->points[i].r;
+                image.at<Vec3b>(Point(int(X(0,0)), int(X(1,0)))) = cor;
+            }
+        }
+    }
+
+    return image;
+}
+/////////////////////////////////////////////////////////////////////////////////////////////////
+void ProcessCloud::colorCloudWithCalibratedImage(PointCloud<PointTN>::Ptr cloud, Mat image, float fx, float fy, float tx, float ty){
+    // Matriz intrinseca e extrinseca
+    Eigen::Matrix3f K;
+    K << fx,  0, image.cols/2.0,
+          0, fy, image.rows/2.0,
+          0,  0,      1      ;
+    Eigen::MatrixXf Rt(3, 4);
+    Rt << 1, 0, 0, tx/100.0,
+          0, 1, 0, ty/100.0,
+          0, 0, 1,    0    ;
+    Eigen::MatrixXf P(3, 4);
+    P = K*Rt;
+#pragma omp parallel for num_threads(100)
+    for(size_t i = 0; i < cloud->size(); i++){
+        // Pegar ponto em coordenadas homogeneas
+        Eigen::MatrixXf X_(4, 1);
+        X_ << cloud->points[i].x,
+              cloud->points[i].y,
+              cloud->points[i].z,
+                      1         ;
+        Eigen::MatrixXf X(3, 1);
+        X = P*X_;
+        if(X(2, 0) > 0){
+            X = X/X(2, 0);
+            // Adicionando ponto na imagem se for o caso de projetado corretamente
+            if(floor(X(0,0)) > 0 && floor(X(0,0)) < image.cols && floor(X(1,0)) > 0 && floor(X(1,0)) < image.rows){
+                cv::Vec3b cor = image.at<Vec3b>(Point(X(0,0), X(1,0)));
+                cloud->points[i].b = cor.val[0]; cloud->points[i].g = cor.val[1]; cloud->points[i].r = cor.val[2];
+            }
+        }
+    }
+
+}
+/////////////////////////////////////////////////////////////////////////////////////////////////
 void ProcessCloud::filterCloudDepthCovariance(PointCloud<PointTN>::Ptr cloud, int kn, float thresh){
     // Objetos para filtrar
     ExtractIndices<PointTN> extract;
