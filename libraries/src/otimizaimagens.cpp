@@ -1,23 +1,21 @@
 #include "../include/otimizaimagens.h"
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
-OtimizaImagens::OtimizaImagens(string p, string icam, string iclu, string id, string dist, string oc):pasta(p),
-    arquivo_cam(icam), arquivo_clusters(iclu), arquivo_depth(id), arquivo_distancias(dist), arquivo_nuvem(oc)
+OtimizaImagens::OtimizaImagens(string p, string icam, string iclu, string id):pasta(p),
+    arquivo_cam(icam), arquivo_clusters(iclu), arquivo_depth(id)
 {
     // Lendo imagens de uma vez
     im_cam      = imread((pasta+arquivo_cam).c_str()     );
     im_clusters = imread((pasta+arquivo_clusters).c_str());
     im_depth    = imread((pasta+arquivo_depth).c_str()   );
-    im_dist     = imread((pasta+arquivo_distancias).c_str(), IMREAD_ANYDEPTH);
-    im_nuvem    = imread((pasta+arquivo_nuvem).c_str()     , IMREAD_ANYDEPTH);
     // Inicia as matrizes para as imagens com arestas
     ed_cam.create(      im_cam.size()     , im_cam.type()      );
     ed_clusters.create( im_clusters.size(), im_clusters.type() );
     ed_depth.create(    im_depth.size()   , im_depth.type()    );
     // Remove a distorcao da imagem da camera com os parametros da calibracao
-    Mat params = (Mat_<double>(1,5) << 0.113092, -0.577590, 0.005000, -0.008206, 0.000000);
-    Mat K      = (Mat_<double>(3,3) << 1484.701399,    0.000000, im_cam.cols/2,//432.741036,
-                                          0.000000, 1477.059238, im_cam.rows/2,//412.362072,
+    params = (Mat_<double>(1,5) << 0.113092, -0.577590, 0.005000, -0.008206, 0.000000);
+    K      = (Mat_<double>(3,3) << 1484.701399,    0.000000, im_cam.cols/2,
+                                          0.000000, 1477.059238, im_cam.rows/2,
                                           0.000000,    0.000000,   1.000000);
     Mat temp, temp_l;
     undistort(im_cam,      temp  , K, params);
@@ -38,6 +36,12 @@ OtimizaImagens::~OtimizaImagens(){
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
 Mat OtimizaImagens::calculateEdgeFromOriginalImage(Mat image, std::string nome){
+    // Se for imagem de clusters, tirar distorcao
+    if(nome == "clusters"){
+        Mat temp;
+        undistort(image, temp, K, params);
+        temp.copyTo(image);
+    }
     // Converter imagens para escala de cinza
     Mat gray;
     cvtColor(image, gray, CV_BGR2GRAY);
@@ -390,13 +394,9 @@ void OtimizaImagens::adjustImagesKeyboard(){
 Mat OtimizaImagens::adjustImageByFocus(Mat in, float fx_r, float fy_r){
     // Procura os pixels que nao sao 0, tem distancia, na matriz de distancias
     Mat temp_edge = Mat::zeros(in.size()     , in.type()     );
-    Mat temp_dist = Mat::zeros(im_dist.size(), im_dist.type());
     #pragma omp parallel for num_threads(100)
     for(int i=0; i<in.cols; i++){
         for(int j=0; j<in.rows; j++){
-            // Se ha distancia, recalcular a posicao (u, v) daquele pixel na imagem de arestas do laser
-            unsigned short dist_pixel = im_dist.at<unsigned short>(Point(i, j));
-            float dist_float = (static_cast<float>(dist_pixel)-3.0) / 1000.0;
 //            if(dist_pixel > 0){
                 // Pegar a posicao antiga e achar uma nova com a taxa entre os focos
                 float u = float(i) * fx_r;// * dist_float;
@@ -405,68 +405,63 @@ Mat OtimizaImagens::adjustImageByFocus(Mat in, float fx_r, float fy_r){
                 if(u > 0 && u < in.cols && v > 0 && v < in.rows){
                     // Alterar na nova imagem de arestas
                     temp_edge.at<Vec3b>(Point(int(u),int(v)))          = in.at<Vec3b>(Point(i,j));
-                    // Alterar na nova imagem de distancias, para seguir a perseguicao na proxima iteracao
-                    temp_dist.at<unsigned short>(Point(int(u),int(v))) = dist_pixel;
                 }
 //            }
         }
     }
-
-    // Renovar a imagem de distancias de dentro da classe
-    temp_dist.copyTo(im_dist);
 
     // Retornar a imagem temporaria de arestas nova
     return temp_edge;
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
 Mat OtimizaImagens::adjustImageByProjection(Mat in, float fx, float fy, float tx, float ty){
-    // Procura os pixels que nao sao 0, tem distancia, na matriz de distancias
+//    // Procura os pixels que nao sao 0, tem distancia, na matriz de distancias
     Mat temp_edge  = Mat::zeros(in.size()      , in.type()     );
-    Mat temp_nuvem = Mat::zeros(im_nuvem.size(), im_nuvem.type());
-    // Matriz intrinseca do laser
-    Eigen::Matrix3f Kl;
-    Kl << fx,  0, in.cols/2,
-           0, fy, in.rows/2,
-           0,  0,  1;
-    Eigen::MatrixXf Rt(3, 4);
-    Rt << 1, 0, 0, tx/100.0,
-          0, 1, 0, ty/100.0,
-          0, 0, 1,    0    ;
-    Eigen::MatrixXf P = Kl*Rt;
-    // Loop de teste de projecao
-    #pragma omp parallel for num_threads(100)
-    for(int i=0; i<in.cols; i++){
-        for(int j=0; j<in.rows; j++){
-            // Se ha distancia em Z, recalcular a posicao (u, v) daquele pixel na imagem de arestas do laser
-            Vec3w ponto = im_nuvem.at<Vec3w>(Point(i, j));
-            Eigen::MatrixXf X_(4, 1), X(3, 1);
-            X_ << float(ponto.val[0])/1000.0-3.0, float(ponto.val[1])/1000.0-3.0, float(ponto.val[2])/1000.0-3.0, 1.0;
-            X = P*X_;
+//    Mat temp_nuvem = Mat::zeros(im_nuvem.size(), im_nuvem.type());
+//    // Matriz intrinseca do laser
+//    Eigen::Matrix3f Kl;
+//    Kl << fx,  0, in.cols/2,
+//           0, fy, in.rows/2,
+//           0,  0,  1;
+//    Eigen::MatrixXf Rt(3, 4);
+//    Rt << 1, 0, 0, tx/100.0,
+//          0, 1, 0, ty/100.0,
+//          0, 0, 1,    0    ;
+//    Eigen::MatrixXf P = Kl*Rt;
+//    // Loop de teste de projecao
+//    #pragma omp parallel for num_threads(100)
+//    for(int i=0; i<in.cols; i++){
+//        for(int j=0; j<in.rows; j++){
+//            // Se ha distancia em Z, recalcular a posicao (u, v) daquele pixel na imagem de arestas do laser
+//            Vec3w ponto = im_nuvem.at<Vec3w>(Point(i, j));
+//            Eigen::MatrixXf X_(4, 1), X(3, 1);
+//            X_ << float(ponto.val[0])/1000.0-3.0, float(ponto.val[1])/1000.0-3.0, float(ponto.val[2])/1000.0-3.0, 1.0;
+//            X = P*X_;
 
-            cout << X_.transpose() << endl;
-            float u=0, v=0;
-            if(X(2, 0) > 0)
-                float u = X(0,0)/X(2,0), v = X(1,0)/X(2,0);
-//            float X = float(ponto.val[0])/1000.0-3.0, Y = float(ponto.val[1])/1000.0-3.0, Z = float(ponto.val[2])/1000.0-3.0;
-//            if(Z > 0){
-//                cout << ponto.val[0] << "   " << ponto.val[1]  << "   " << ponto.val[2] << endl;
-//                // Pegar a posicao antiga e achar uma nova com a taxa entre os focos - matriz de projecao desenvolvida
-//                float u = fx*(X + tx*0.01)/Z + float(temp_edge.cols)/2; // trazendo o tx e ty para metros aqui
-//                float v = fy*(Y + ty*0.01)/Z + float(temp_edge.rows)/2;
-//                cout << u << "   " << v << endl;
-                // Se cair dentro das dimensoes das imagens, prosseguir
-                if(u > 0 && u < in.cols && v > 0 && v < in.rows){
-                    // Alterar na nova imagem de arestas
-                    temp_edge.at< Vec3b>(Point(int(u),int(v))) = in.at<Vec3b>(Point(i,j));
-                    // Alterar na nova imagem de distancias, para seguir a perseguicao na proxima iteracao
-                    temp_nuvem.at<Vec3w>(Point(int(u),int(v))) = ponto;
-                }
-//            }
-        }
-    }
+//            cout << X_.transpose() << endl;
+//            float u=0, v=0;
+//            if(X(2, 0) > 0)
+//                float u = X(0,0)/X(2,0), v = X(1,0)/X(2,0);
+////            float X = float(ponto.val[0])/1000.0-3.0, Y = float(ponto.val[1])/1000.0-3.0, Z = float(ponto.val[2])/1000.0-3.0;
+////            if(Z > 0){
+////                cout << ponto.val[0] << "   " << ponto.val[1]  << "   " << ponto.val[2] << endl;
+////                // Pegar a posicao antiga e achar uma nova com a taxa entre os focos - matriz de projecao desenvolvida
+////                float u = fx*(X + tx*0.01)/Z + float(temp_edge.cols)/2; // trazendo o tx e ty para metros aqui
+////                float v = fy*(Y + ty*0.01)/Z + float(temp_edge.rows)/2;
+////                cout << u << "   " << v << endl;
+//                // Se cair dentro das dimensoes das imagens, prosseguir
+//                if(u > 0 && u < in.cols && v > 0 && v < in.rows){
+//                    // Alterar na nova imagem de arestas
+//                    temp_edge.at< Vec3b>(Point(int(u),int(v))) = in.at<Vec3b>(Point(i,j));
+//                    // Alterar na nova imagem de distancias, para seguir a perseguicao na proxima iteracao
+//                    temp_nuvem.at<Vec3w>(Point(int(u),int(v))) = ponto;
+//                }
+////            }
+//        }
+//    }
 
-    // Renovar a imagem da nuvem organizada de dentro da classe
-    temp_nuvem.copyTo(im_nuvem);
+//    // Renovar a imagem da nuvem organizada de dentro da classe
+//    temp_nuvem.copyTo(im_nuvem);
 
     // Retornar a imagem temporaria de arestas nova
     return temp_edge;

@@ -47,8 +47,8 @@ int main(int argc, char **argv)
     Clusters cl;
     ProcessCloud pc;
 
-    std::string im_rgb = "camera_rgb.jpg", im_clu = "imagem_clusters.png", im_dep = "camera_virtual.jpg", im_dist = "distancias.png", im_nuvem = "nuvem_organizada.png";
-    OtimizaImagens oi(std::string(home)+"/Desktop/Dados_B9/", im_rgb, im_clu, im_dep, im_dist, im_nuvem);
+    std::string im_rgb = "camera_rgb.png", im_clu = "imagem_clusters.png", im_dep = "imagem_virtual.png";
+    OtimizaImagens oi(std::string(home)+"/Desktop/Dados_B9/", im_rgb, im_clu, im_dep);
 
     // Le nuvem clusterizada
     PointCloud<PointTN>::Ptr nuvem_clusters (new PointCloud<PointTN>);

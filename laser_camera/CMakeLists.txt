@@ -32,8 +32,8 @@ target_link_libraries(otimizar_nuvem_node ${catkin_LIBRARIES} ${PCL_LIBRARIES} $
 add_executable(clusters_node src/separar_clusters.cpp ../libraries/src/clusters.cpp ../libraries/src/processcloud.cpp)
 target_link_libraries(clusters_node ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS} ${OpenMP_LIBS})
 
-add_executable(processa_imagens src/processa_imagens.cpp ../libraries/src/otimizaimagens.cpp)
-target_link_libraries(processa_imagens ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS} ${OpenMP_LIBS})
+#add_executable(processa_imagens src/processa_imagens.cpp ../libraries/src/otimizaimagens.cpp)
+#target_link_libraries(processa_imagens ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS} ${OpenMP_LIBS})
 
 add_executable(otimiza_manual src/otimiza_manual.cpp ../libraries/src/clusters.cpp ../libraries/src/processcloud.cpp ../libraries/src/otimizaimagens.cpp)
 target_link_libraries(otimiza_manual ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS} ${OpenMP_LIBS})

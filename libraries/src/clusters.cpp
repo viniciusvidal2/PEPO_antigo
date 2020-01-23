@@ -161,8 +161,8 @@ void Clusters::extractClustersEuclidian(PointCloud<PointTN>::Ptr in, vector<Poin
     search::KdTree<PointTN>::Ptr tree (new search::KdTree<PointTN>);
     EuclideanClusterExtraction<PointTN> eucl;
     eucl.setInputCloud(in);
-    eucl.setMaxClusterSize(int(in->size()*2));
-    eucl.setMinClusterSize(int(in->size()/4));
+    eucl.setMaxClusterSize(int(in->size()*10));
+    eucl.setMinClusterSize(50);
     eucl.setClusterTolerance(0.05);
     eucl.setSearchMethod(tree);
     // Inicia vetor de clusters - pelo indice na nuvem
@@ -187,7 +187,6 @@ void Clusters::separateClustersByDistance(vector<PointCloud<PointTN> > &clust){
     // Criar vetor de nuvens interno para cada nuvem em cluster, aplicar o metodo
     vector<PointCloud<PointTN>> local, tempv;
     PointCloud<PointTN>::Ptr tempc (new PointCloud<PointTN>);
-    ROS_INFO("A entrada possui %zu clusters.", clust.size());
     for(size_t i=0; i<clust.size(); i++){
         // Passa para a funcao de euclidean cluster a nuvem corespondente
         *tempc = clust[i];
@@ -196,7 +195,6 @@ void Clusters::separateClustersByDistance(vector<PointCloud<PointTN> > &clust){
         // Adiciona ao novo vetor local os resultados
         local.insert(local.end(), tempv.begin(), tempv.end());
     }
-    ROS_INFO("Local saiu com %zu clusters.", local.size());
     // Forca o vetor global ser igual ao vetor local que foi separado
     clust.clear(); clust = local;
 }

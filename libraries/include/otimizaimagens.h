@@ -39,7 +39,7 @@ using namespace pcl::io;
 class OtimizaImagens
 {
 public:
-  OtimizaImagens(std::string p, std::string icam, std::string iclu, std::string id, std::string dist, string oc);
+  OtimizaImagens(std::string p, std::string icam, std::string iclu, std::string id);
   virtual ~OtimizaImagens();
 
   void calculateEdgesOnImages();
@@ -60,13 +60,15 @@ private:
   Mat adjustImageByProjection(Mat in, float fx, float fy, float tx, float ty);
 
   // Arquivos de imagem
-  std::string pasta, arquivo_cam, arquivo_clusters, arquivo_depth, arquivo_distancias, arquivo_nuvem;
+  std::string pasta, arquivo_cam, arquivo_clusters, arquivo_depth;
   // Imagens fonte para estudo
-  Mat im_cam, im_depth, im_clusters, im_dist, im_nuvem;
+  Mat im_cam, im_depth, im_clusters;
   // Imagens com arestas
   Mat ed_cam, ed_depth, ed_clusters;
   // Focos para a imagem virtual do laser a serem otimizados a partir do vindo da camera
   float fx_l, fy_l;
+  // Parametros e matriz da camera
+  Mat params, K;
 };
 
 #endif // OTIMIZAIMAGENS_H

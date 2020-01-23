@@ -40,6 +40,7 @@ void ProcessCloud::calculateNormals(PointCloud<PointT>::Ptr in, PointCloud<Point
     removeNaNNormalsFromPointCloud(*acc_normal, *acc_normal, indicesnan);
 
     // Forcar virar as normais na marra para a origem
+#pragma omp parallel for num_threads(acc_normal->size()/10);
     for(size_t i=0; i < acc_normal->size(); i++){
         Eigen::Vector3f normal, cp;
         normal << acc_normal->points[i].normal_x, acc_normal->points[i].normal_y, acc_normal->points[i].normal_z;
@@ -120,9 +121,9 @@ void ProcessCloud::transformToCameraFrame(PointCloud<PointTN>::Ptr nuvem){
 /////////////////////////////////////////////////////////////////////////////////////////////////
 void ProcessCloud::createVirtualLaserImage(PointCloud<PointTN>::Ptr nuvem, string nome){
     // Imagem com as distancias para serem usadas na otimizacao e outra com a nuvem inteira
-    Mat dists(Size(cam_w, cam_h), CV_16UC1, Scalar(0, 0, 0));
-    Mat index(Size(cam_w, cam_h), CV_16UC1, Scalar(0, 0, 0));
-    Mat oc(   Size(cam_w, cam_h), CV_16UC3, Scalar(0, 0, 0)); // organized cloud
+//    Mat dists(Size(cam_w, cam_h), CV_16UC1, Scalar(0, 0, 0));
+//    Mat index(Size(cam_w, cam_h), CV_16UC1, Scalar(0, 0, 0));
+//    Mat oc(   Size(cam_w, cam_h), CV_16UC3, Scalar(0, 0, 0)); // organized cloud
     // Projetar os pontos na foto virtual e colorir imagem
     Mat fl(Size(cam_w, cam_h), CV_8UC3, Scalar(0, 0, 0)); // Mesmas dimensoes que a camera tiver
     #pragma omp parallel for num_threads(100)
@@ -139,28 +140,28 @@ void ProcessCloud::createVirtualLaserImage(PointCloud<PointTN>::Ptr nuvem, strin
             cv::Vec3b cor;
             cor.val[0] = nuvem->points[i].b; cor.val[1] = nuvem->points[i].g; cor.val[2] = nuvem->points[i].r;
             fl.at<Vec3b>(Point(int(X(0,0)), int(X(1,0)))) = cor;
-            // Salva a distancia que estava naquele pixel
-            dists.at<unsigned short>(Point(int(X(0,0)), int(X(1,0)))) = static_cast<unsigned short>( int((X_(2, 0)+3)*1000.0) ); // Converte para milimetros e pega como inteiro
-            // Salva os valores de X, Y e Z na imagem da nuvem organizada
-            Vec3w P;
-            P.val[0] = static_cast<unsigned short>( int((X_(0, 0)+3)*1000.0) );
-            P.val[1] = static_cast<unsigned short>( int((X_(1, 0)+3)*1000.0) );
-            P.val[2] = static_cast<unsigned short>( int((X_(2, 0)+3)*1000.0) );
-            oc.at<Vec3w>(Point(int(X(0,0)), int(X(1,0)))) = P;
-            // Salva o indice do ponto na imagem de indices - otimizacao
-            index.at<unsigned short>(Point(int(X(0,0)), int(X(1,0)))) = i;
+//            // Salva a distancia que estava naquele pixel
+//            dists.at<unsigned short>(Point(int(X(0,0)), int(X(1,0)))) = static_cast<unsigned short>( int((X_(2, 0)+3)*1000.0) ); // Converte para milimetros e pega como inteiro
+//            // Salva os valores de X, Y e Z na imagem da nuvem organizada
+//            Vec3w P;
+//            P.val[0] = static_cast<unsigned short>( int((X_(0, 0)+3)*1000.0) );
+//            P.val[1] = static_cast<unsigned short>( int((X_(1, 0)+3)*1000.0) );
+//            P.val[2] = static_cast<unsigned short>( int((X_(2, 0)+3)*1000.0) );
+//            oc.at<Vec3w>(Point(int(X(0,0)), int(X(1,0)))) = P;
+//            // Salva o indice do ponto na imagem de indices - otimizacao
+//            index.at<unsigned short>(Point(int(X(0,0)), int(X(1,0)))) = i;
         }
     }
     // Corrigir os ruidos cinzas antes de salvar
     fl = correctColorCluster(fl);
     // Salva de uma vez a foto do laser
     saveImage(fl, nome);
-    // Salva a foto das distancias
-    saveImage(dists, "distancias");
-    // Salva a imagem com 3 canais para a nuvem organizada
-    saveImage(oc, "nuvem_organizada");
-    // Salva a imagem com indices da nuvem de pontos
-    saveImage(index, "indices_da_nuvem");
+//    // Salva a foto das distancias
+//    saveImage(dists, "distancias");
+//    // Salva a imagem com 3 canais para a nuvem organizada
+//    saveImage(oc, "nuvem_organizada");
+//    // Salva a imagem com indices da nuvem de pontos
+//    saveImage(index, "indices_da_nuvem");
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
 Mat ProcessCloud::projectCloudToLaserCenter(PointCloud<PointTN>::Ptr cloud, float fx, float fy, float tx, float ty, Size s){
