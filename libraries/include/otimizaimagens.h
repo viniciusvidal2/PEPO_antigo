@@ -44,6 +44,7 @@ public:
 
   void calculateEdgesOnImages();
   Mat calculateEdgeFromOriginalImage(Mat image, string nome);
+  Mat calculateHoughTransformFromOriginalImage(Mat in, string nome);
   void saveEdgeImages();
   void calcAndMatchFeatures();
   void adjustImagesKeyboard();

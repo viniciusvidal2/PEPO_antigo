@@ -69,6 +69,46 @@ Mat OtimizaImagens::calculateEdgeFromOriginalImage(Mat image, std::string nome){
     return cont;
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
+Mat OtimizaImagens::calculateHoughTransformFromOriginalImage(Mat in, string nome){
+    // Se for imagem de clusters, tirar distorcao
+    if(nome == "clusters"){
+        Mat temp;
+        undistort(in, temp, K, params);
+        temp.copyTo(in);
+    }
+    // Converter imagens para escala de cinza
+    Mat gray;
+    cvtColor(in, gray, CV_BGR2GRAY);
+    // Definir valores para calculos de arestas
+    int low_threshold = 10; // Maximo aqui de 100 pelo site do OpenCV
+    int ratio = 3, kernel_size = 3;
+    // Filtro gaussiano nas imagens para relaxar as mesmas
+    if(nome == "clusters"){
+        blur(gray, gray, Size(3, 3));
+    } else if(nome == "rgb"){
+        blur(gray, gray, Size(5, 5));
+    }
+    // Calcular as arestas sobre as imagens e guardar nas mascaras
+    Mat mask;
+    Canny(gray, mask, low_threshold, ratio*low_threshold, kernel_size);
+    // Calcula aqui as linhas por transformada de Hough sobre a mascara
+    vector<Vec4i> lines;
+    int votes_thresh = 60; // Numero de pontos intersecao para considerar como uma reta
+    HoughLinesP(mask, lines, 1, CV_PI/180.0, votes_thresh, 10, 20);
+    // Desenha as linhas, variando a cor segundo imagem de entrada
+    Mat out = Mat::zeros(in.size(), in.type());
+    for(size_t i=0; i<lines.size(); i++){
+        Vec4i l = lines[i];
+        if(nome == "rgb"){
+            line(out, Point(l[0], l[1]), Point(l[2], l[3]), Scalar(0, 255,   0), 2);
+        } else if(nome == "clusters"){
+            line(out, Point(l[0], l[1]), Point(l[2], l[3]), Scalar(0,   0, 255), 2);
+        }
+    }
+
+    return out;
+}
+/////////////////////////////////////////////////////////////////////////////////////////////////
 void OtimizaImagens::calculateEdgesOnImages(){
     // Corrigindo ruidos na imagem de clusters para calcular melhor edges
     im_clusters = correctColorCluster(im_clusters);

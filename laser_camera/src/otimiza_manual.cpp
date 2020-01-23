@@ -61,6 +61,7 @@ int main(int argc, char **argv)
     Mat rgb, edges_rgb;
     rgb = oi.getImage("rgb");
     edges_rgb = oi.calculateEdgeFromOriginalImage(rgb, "rgb");
+    edges_rgb = oi.calculateHoughTransformFromOriginalImage(edges_rgb, "rgb");
 
     ////////////////////////////////////////////////////////
     /// Loop com o teclado sobre o resultado da projecao ///
@@ -80,6 +81,7 @@ int main(int argc, char **argv)
     Mat edges_clusters, imagem_camera_virtual;
     imagem_camera_virtual = oi.correctColorCluster(nuvem_projetada_raw);
     edges_clusters        = oi.calculateEdgeFromOriginalImage(imagem_camera_virtual, "clusters");
+    edges_clusters        = oi.calculateHoughTransformFromOriginalImage(edges_clusters, "clusters");
 
     // Soma as duas imagens de arestas e mostra
     Mat soma;
@@ -136,6 +138,7 @@ int main(int argc, char **argv)
             ROS_INFO("Calculando imagem e arestas da camera virtual ...");
             imagem_camera_virtual = oi.correctColorCluster(nuvem_projetada_raw);
             edges_clusters        = oi.calculateEdgeFromOriginalImage(imagem_camera_virtual, "clusters");
+            edges_clusters        = oi.calculateHoughTransformFromOriginalImage(edges_clusters, "clusters");
 
             ROS_INFO("Pronto, proximo ajuste ...");
             // Soma as duas imagens de arestas e mostra

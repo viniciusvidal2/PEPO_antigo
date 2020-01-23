@@ -61,14 +61,14 @@ int main(int argc, char **argv)
     home = getenv("HOME");
     loadPLYFile<PointTN>(std::string(home)+"/Desktop/Dados_B9/nuvem_final.ply", *inicial);
 
-//    // Filtra por outliers
-//    ROS_INFO("Filtrando por outliers ...");
-//    StatisticalOutlierRemoval<PointTN> sor;
-//    sor.setInputCloud(inicial);
-//    sor.setMeanK(10);
-//    sor.setStddevMulThresh(3);
-//    sor.setNegative(false);
-//    sor.filter(*filtrada);
+    // Filtra por outliers
+    ROS_INFO("Filtrando por outliers ...");
+    StatisticalOutlierRemoval<PointTN> sor;
+    sor.setInputCloud(inicial);
+    sor.setMeanK(10);
+    sor.setStddevMulThresh(3);
+    sor.setNegative(false);
+    sor.filter(*filtrada);
 
 //    ROS_INFO("Filtrando ruidos radiais ...");
 //    pc.filterCloudDepthCovariance(filtrada, 50, 1.5);
