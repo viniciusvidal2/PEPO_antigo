@@ -65,6 +65,9 @@ Mat OtimizaImagens::calculateEdgeFromOriginalImage(Mat image, std::string nome){
         cont = Scalar::all(0);
         image.copyTo(cont, mask);
     }
+    // Remover as arestas do circulo externo pelo raio (caso clusters)
+    if(nome == "clusters")
+        cont = removeOuterEdges(cont);
 
     return cont;
 }
@@ -511,5 +514,37 @@ Mat OtimizaImagens::getImage(string nome){
     if(nome == "rgb"){
         return im_cam;
     }
+}
+/////////////////////////////////////////////////////////////////////////////////////////////////
+Mat OtimizaImagens::removeOuterEdges(Mat in){
+    // Variaveis para calcular o raio medio do circulo de fora
+    float raio_sum = 0, raio_calc, cont = 0, cx = float(in.cols/2), cy = float(in.rows/2);
+    // Varre a foto em termos de linhas ate pegar a coluna onde ha pontos coloridos - so metade de cada ja deu
+    Vec3b cor;
+    for(int j=0; j < in.rows/2; j++){
+        for(int i=0; i < in.cols/2; i++){
+            cor = in.at<Vec3b>(Point(i, j));
+            if(cor.val[0] != 0 || cor.val[1] != 0 || cor.val[2] != 0){
+                raio_calc = sqrt( pow(cx - i, 2) + pow(cy - j, 2) );
+                raio_sum += raio_calc;
+                cont++;
+                break;
+            }
+        }
+    }
+    // Calcula a media do raio em relacao ao centro da imagem
+    float raio_medio = raio_sum / cont;
+    // Passa por toda a imagem de novo e altera a cor do pixel que esta fora de X vezes o raio
+#pragma omp parallel for num_threads(100)
+    cor.val[0] = 0; cor.val[1] = 0; cor.val[2] = 0;
+    for(int j=0; j < in.rows; j++){
+        for(int i=0; i < in.cols; i++){
+            float raio = sqrt( pow(cx - i, 2) + pow(cy - j, 2) );
+            if(raio > 0.96*raio_medio)
+                in.at<Vec3b>(Point(i, j)) = cor;
+        }
+    }
+
+    return in;
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////

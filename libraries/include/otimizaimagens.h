@@ -59,6 +59,7 @@ private:
   Mat calculateContours(Mat in);
   Mat adjustImageByFocus(Mat in, float fx_r, float fy_r);
   Mat adjustImageByProjection(Mat in, float fx, float fy, float tx, float ty);
+  Mat removeOuterEdges(Mat in);
 
   // Arquivos de imagem
   std::string pasta, arquivo_cam, arquivo_clusters, arquivo_depth;
