@@ -67,6 +67,9 @@ int main(int argc, char **argv)
     /// Loop com o teclado sobre o resultado da projecao ///
     ////////////////////////////////////////////////////////
 
+    // Funcao objeto
+    float fob = 0;
+
     // Parametros para a funcao de projecao - intrinsecos da camera a principio
     float fx = 1496.701399, fy = 1475.059238, tx = 2, ty = 9, passo = 5;
 //    float fx = 1484.701399, fy = 1477.059238, tx = 0, ty = 0, passo = 5;
@@ -139,6 +142,10 @@ int main(int argc, char **argv)
             imagem_camera_virtual = oi.correctColorCluster(nuvem_projetada_raw);
             edges_clusters        = oi.calculateEdgeFromOriginalImage(imagem_camera_virtual, "clusters");
 //            edges_clusters        = oi.calculateHoughTransformFromOriginalImage(edges_clusters, "clusters");
+
+            // Aplicando a fob aqui para ver como sai
+            fob = oi.FOB(edges_rgb, edges_clusters);
+            ROS_INFO("Valor da FOB na iteracao: %.2f", fob);
 
             ROS_INFO("Pronto, proximo ajuste ...");
             // Soma as duas imagens de arestas e mostra

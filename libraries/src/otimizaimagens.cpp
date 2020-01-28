@@ -112,47 +112,47 @@ Mat OtimizaImagens::calculateHoughTransformFromOriginalImage(Mat in, string nome
     return out;
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
-void OtimizaImagens::calculateEdgesOnImages(){
-    // Corrigindo ruidos na imagem de clusters para calcular melhor edges
-    im_clusters = correctColorCluster(im_clusters);
-    // Converter imagens para escala de cinza
-    Mat cam_gray, clusters_gray, depth_gray;
-    cvtColor(im_cam     , cam_gray     , CV_BGR2GRAY);
-    cvtColor(im_depth   , depth_gray   , CV_BGR2GRAY);
-    cvtColor(im_clusters, clusters_gray, CV_BGR2GRAY);
-    // Encontrar blobs na imagem de clusters para calcular melhor as arestas
-//    clusters_gray = calculateBlobs(clusters_gray);
-    // Definir valores para calculos de arestas
-    int low_threshold = 10; // Maximo aqui de 100 pelo site do OpenCV
-    int ratio = 3, kernel_size = 3;
-    // Filtro gaussiano nas imagens para relaxar as mesmas
-    blur(cam_gray     , cam_gray     , Size(5, 5));
-    blur(clusters_gray, clusters_gray, Size(3, 3));
-    blur(depth_gray   , depth_gray   , Size(5, 5));
-    // Calcular as arestas sobre as imagens e guardar nas mascaras
-    Mat mask_cam, mask_clusters, mask_depth;
-    Canny(cam_gray     , mask_cam     , low_threshold, ratio*low_threshold, kernel_size);
-    Canny(clusters_gray, mask_clusters, low_threshold, ratio*low_threshold, kernel_size);
-    Canny(depth_gray   , mask_depth   , low_threshold, ratio*low_threshold, kernel_size);
-    // Calcular contornos na imagem de clusters
-    Mat clusters_cont;
-    clusters_cont = calculateContours(mask_clusters);
-    // Definir as imagens finais de arestas
-    ed_clusters = clusters_cont;
-    // Iniciar imagens com 0 onde nao ha arestas
-    ed_cam      = Scalar::all(0);
-//    ed_clusters = Scalar::all(0);
-//    ed_depth    = Scalar::all(0);
-    // Preencher com a mascara a imagem de saida com arestas
-    im_cam.copyTo(     ed_cam     , mask_cam     );
-//    im_clusters.copyTo(ed_clusters, mask_clusters);
-//    im_depth.copyTo(   ed_depth   , mask_depth   );
-    // Mostrar resultado
-//    imshow("RGB", ed_cam);
-//    imshow("Clusters", ed_clusters);
-//    imshow("Depth", ed_depth);
-//    waitKey(0);
-}
+//void OtimizaImagens::calculateEdgesOnImages(){
+//    // Corrigindo ruidos na imagem de clusters para calcular melhor edges
+//    im_clusters = correctColorCluster(im_clusters);
+//    // Converter imagens para escala de cinza
+//    Mat cam_gray, clusters_gray, depth_gray;
+//    cvtColor(im_cam     , cam_gray     , CV_BGR2GRAY);
+//    cvtColor(im_depth   , depth_gray   , CV_BGR2GRAY);
+//    cvtColor(im_clusters, clusters_gray, CV_BGR2GRAY);
+//    // Encontrar blobs na imagem de clusters para calcular melhor as arestas
+////    clusters_gray = calculateBlobs(clusters_gray);
+//    // Definir valores para calculos de arestas
+//    int low_threshold = 10; // Maximo aqui de 100 pelo site do OpenCV
+//    int ratio = 3, kernel_size = 3;
+//    // Filtro gaussiano nas imagens para relaxar as mesmas
+//    blur(cam_gray     , cam_gray     , Size(5, 5));
+//    blur(clusters_gray, clusters_gray, Size(3, 3));
+//    blur(depth_gray   , depth_gray   , Size(5, 5));
+//    // Calcular as arestas sobre as imagens e guardar nas mascaras
+//    Mat mask_cam, mask_clusters, mask_depth;
+//    Canny(cam_gray     , mask_cam     , low_threshold, ratio*low_threshold, kernel_size);
+//    Canny(clusters_gray, mask_clusters, low_threshold, ratio*low_threshold, kernel_size);
+//    Canny(depth_gray   , mask_depth   , low_threshold, ratio*low_threshold, kernel_size);
+//    // Calcular contornos na imagem de clusters
+//    Mat clusters_cont;
+//    clusters_cont = calculateContours(mask_clusters);
+//    // Definir as imagens finais de arestas
+//    ed_clusters = clusters_cont;
+//    // Iniciar imagens com 0 onde nao ha arestas
+//    ed_cam      = Scalar::all(0);
+////    ed_clusters = Scalar::all(0);
+////    ed_depth    = Scalar::all(0);
+//    // Preencher com a mascara a imagem de saida com arestas
+//    im_cam.copyTo(     ed_cam     , mask_cam     );
+////    im_clusters.copyTo(ed_clusters, mask_clusters);
+////    im_depth.copyTo(   ed_depth   , mask_depth   );
+//    // Mostrar resultado
+////    imshow("RGB", ed_cam);
+////    imshow("Clusters", ed_clusters);
+////    imshow("Depth", ed_depth);
+////    waitKey(0);
+//}
 /////////////////////////////////////////////////////////////////////////////////////////////////
 void OtimizaImagens::saveEdgeImages(){
     imwrite( (pasta+"edges_rgb.jpg").c_str()     , ed_cam      );
@@ -231,114 +231,114 @@ Vec3b OtimizaImagens::findPredominantColor(int u, int v, Mat in, int desvio){
     return cores[indice_encontrado];
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
-void OtimizaImagens::calcAndMatchFeatures(){
-    // Keypoints e descritores para astra e zed
-    std::vector<cv::KeyPoint> keypoints_cam, keypoints_clusters;
-    cv::Mat descriptors_cam, descriptors_clusters;
-    /// Comparando e filtrando matchs ///
-    cv::Ptr<cv::DescriptorMatcher> matcher;
-    matcher = cv::DescriptorMatcher::create(cv::DescriptorMatcher::FLANNBASED);
-    std::vector<std::vector< cv::DMatch > > matches;
-    std::vector< cv::DMatch > good_matches;
+//void OtimizaImagens::calcAndMatchFeatures(){
+//    // Keypoints e descritores para astra e zed
+//    std::vector<cv::KeyPoint> keypoints_cam, keypoints_clusters;
+//    cv::Mat descriptors_cam, descriptors_clusters;
+//    /// Comparando e filtrando matchs ///
+//    cv::Ptr<cv::DescriptorMatcher> matcher;
+//    matcher = cv::DescriptorMatcher::create(cv::DescriptorMatcher::FLANNBASED);
+//    std::vector<std::vector< cv::DMatch > > matches;
+//    std::vector< cv::DMatch > good_matches;
 
-    int tent = 0; // tentativas de achar X correspondencias bacanas
-    float min_hessian = 2000;
+//    int tent = 0; // tentativas de achar X correspondencias bacanas
+//    float min_hessian = 2000;
 
-    std::vector<cv::KeyPoint> goodKeypointsCam, goodKeypointsCluster;
+//    std::vector<cv::KeyPoint> goodKeypointsCam, goodKeypointsCluster;
 
-    while(goodKeypointsCam.size() < 7 && tent < 20){
+//    while(goodKeypointsCam.size() < 7 && tent < 20){
 
-        good_matches.clear(); goodKeypointsCam.clear(); goodKeypointsCluster.clear();
+//        good_matches.clear(); goodKeypointsCam.clear(); goodKeypointsCluster.clear();
 
-        Ptr<xfeatures2d::SURF> f2d = xfeatures2d::SURF::create(min_hessian);
+//        Ptr<xfeatures2d::SURF> f2d = xfeatures2d::SURF::create(min_hessian);
 
-        f2d->detectAndCompute(im_cam     , Mat(), keypoints_cam     , descriptors_cam     );
+//        f2d->detectAndCompute(im_cam     , Mat(), keypoints_cam     , descriptors_cam     );
 
-        f2d->detectAndCompute(im_depth, Mat(), keypoints_clusters, descriptors_clusters);
+//        f2d->detectAndCompute(im_depth, Mat(), keypoints_clusters, descriptors_clusters);
 
-        matcher->knnMatch(descriptors_cam, descriptors_clusters, matches, 2);
+//        matcher->knnMatch(descriptors_cam, descriptors_clusters, matches, 2);
 
-        for (size_t i = 0; i < matches.size(); i++)
-        {
-            if (matches.at(i).size() >= 2)
-            {
-                if (matches.at(i).at(0).distance < 0.75*matches.at(i).at(1).distance)
-                {
-                    good_matches.push_back(matches.at(i).at(0));
-                }
-            }
-        }
+//        for (size_t i = 0; i < matches.size(); i++)
+//        {
+//            if (matches.at(i).size() >= 2)
+//            {
+//                if (matches.at(i).at(0).distance < 0.75*matches.at(i).at(1).distance)
+//                {
+//                    good_matches.push_back(matches.at(i).at(0));
+//                }
+//            }
+//        }
 
-        tent += 1;
-        min_hessian = 0.7*min_hessian;
+//        tent += 1;
+//        min_hessian = 0.7*min_hessian;
 
-        std::vector<cv::Point2f> imgLeftPts;
-        std::vector<cv::Point2f> imgRightPts;
+//        std::vector<cv::Point2f> imgLeftPts;
+//        std::vector<cv::Point2f> imgRightPts;
 
-        for (size_t i = 0; i < good_matches.size(); i++){
-                goodKeypointsCam.push_back(keypoints_cam[good_matches[i].queryIdx]);
-                goodKeypointsCluster.push_back(keypoints_clusters[good_matches[i].trainIdx]);
-                imgLeftPts.push_back(keypoints_cam[good_matches[i].queryIdx].pt);
-                imgRightPts.push_back(keypoints_clusters[good_matches[i].trainIdx].pt);
-        }
+//        for (size_t i = 0; i < good_matches.size(); i++){
+//                goodKeypointsCam.push_back(keypoints_cam[good_matches[i].queryIdx]);
+//                goodKeypointsCluster.push_back(keypoints_clusters[good_matches[i].trainIdx]);
+//                imgLeftPts.push_back(keypoints_cam[good_matches[i].queryIdx].pt);
+//                imgRightPts.push_back(keypoints_clusters[good_matches[i].trainIdx].pt);
+//        }
 
-        if(imgLeftPts.size() > 0){
-            cv::Mat inliers;
-            cv::Mat Ka = (cv::Mat_<double>(3, 3) << 1484.701399, 0.0, 432.741036, 0.0, 1477.059238, 412.362072, 0.0, 0.0, 1.0);
-            cv::Mat E = findEssentialMat(imgLeftPts, imgRightPts, Ka, CV_RANSAC, 0.99999, 1.0, inliers);
+//        if(imgLeftPts.size() > 0){
+//            cv::Mat inliers;
+//            cv::Mat Ka = (cv::Mat_<double>(3, 3) << 1484.701399, 0.0, 432.741036, 0.0, 1477.059238, 412.362072, 0.0, 0.0, 1.0);
+//            cv::Mat E = findEssentialMat(imgLeftPts, imgRightPts, Ka, CV_RANSAC, 0.99999, 1.0, inliers);
 
-            std::vector<cv::KeyPoint> goodKeypointsCamTemp;
-            std::vector<cv::KeyPoint> goodKeypointsClusterTemp;
-            bool dx = false, dy = false;
-            for (size_t i = 0; i < inliers.rows; i++){
-                if (inliers.at<uchar>(i, 0) == 1 && dx && dy){
-                    goodKeypointsCamTemp.push_back(goodKeypointsCam.at(i));
-                    goodKeypointsClusterTemp.push_back(goodKeypointsCluster.at(i));
-                }
-            }
-            goodKeypointsCam     = goodKeypointsCamTemp;
-            goodKeypointsCluster = goodKeypointsClusterTemp;
-        }
+//            std::vector<cv::KeyPoint> goodKeypointsCamTemp;
+//            std::vector<cv::KeyPoint> goodKeypointsClusterTemp;
+//            bool dx = false, dy = false;
+//            for (size_t i = 0; i < inliers.rows; i++){
+//                if (inliers.at<uchar>(i, 0) == 1 && dx && dy){
+//                    goodKeypointsCamTemp.push_back(goodKeypointsCam.at(i));
+//                    goodKeypointsClusterTemp.push_back(goodKeypointsCluster.at(i));
+//                }
+//            }
+//            goodKeypointsCam     = goodKeypointsCamTemp;
+//            goodKeypointsCluster = goodKeypointsClusterTemp;
+//        }
 
-    } // fim do while
+//    } // fim do while
 
-    if(goodKeypointsCam.size()){
-        Mat c, cl;
-        im_cam.copyTo(c); im_depth.copyTo(cl);
-        for(size_t i=0; i<goodKeypointsCam.size(); i++){
-            cv::Scalar color = cv::Scalar(rand() % 255, rand() % 255, rand() % 255);
-            circle(c, goodKeypointsCam[i].pt, 5, color, 2);
-            circle(cl, goodKeypointsCluster[i].pt, 5, color, 2);
-        }
-        imshow("Features camera", c);
-        imshow("Features clusters", cl);
-        waitKey(0);
-    }
-}
+//    if(goodKeypointsCam.size()){
+//        Mat c, cl;
+//        im_cam.copyTo(c); im_depth.copyTo(cl);
+//        for(size_t i=0; i<goodKeypointsCam.size(); i++){
+//            cv::Scalar color = cv::Scalar(rand() % 255, rand() % 255, rand() % 255);
+//            circle(c, goodKeypointsCam[i].pt, 5, color, 2);
+//            circle(cl, goodKeypointsCluster[i].pt, 5, color, 2);
+//        }
+//        imshow("Features camera", c);
+//        imshow("Features clusters", cl);
+//        waitKey(0);
+//    }
+//}
 /////////////////////////////////////////////////////////////////////////////////////////////////
-Mat OtimizaImagens::calculateBlobs(Mat in){
-    // Parametros
-    SimpleBlobDetector::Params params;
-    params.filterByArea = true;
-    params.minArea = 200; // [pixels]
-    params.filterByCircularity = false;
-    params.filterByColor = false;
-    params.filterByConvexity = false;
-    params.filterByInertia = false;
-    // Detector
-    Ptr<SimpleBlobDetector> detector = SimpleBlobDetector::create(params);
-    vector<KeyPoint> keypoints;
-    // Detectando
-    detector->detect(in, keypoints);
-    // Plotando aqui
-    Mat im_with_keypoints;
-    drawKeypoints(in, keypoints, im_with_keypoints, Scalar(0,0,255), DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
-    // Show blobs
-    imshow("keypoints", im_with_keypoints);
-    waitKey(0);
+//Mat OtimizaImagens::calculateBlobs(Mat in){
+//    // Parametros
+//    SimpleBlobDetector::Params params;
+//    params.filterByArea = true;
+//    params.minArea = 200; // [pixels]
+//    params.filterByCircularity = false;
+//    params.filterByColor = false;
+//    params.filterByConvexity = false;
+//    params.filterByInertia = false;
+//    // Detector
+//    Ptr<SimpleBlobDetector> detector = SimpleBlobDetector::create(params);
+//    vector<KeyPoint> keypoints;
+//    // Detectando
+//    detector->detect(in, keypoints);
+//    // Plotando aqui
+//    Mat im_with_keypoints;
+//    drawKeypoints(in, keypoints, im_with_keypoints, Scalar(0,0,255), DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
+//    // Show blobs
+//    imshow("keypoints", im_with_keypoints);
+//    waitKey(0);
 
-    return in;
-}
+//    return in;
+//}
 /////////////////////////////////////////////////////////////////////////////////////////////////
 Mat OtimizaImagens::calculateContours(Mat in){
     // Encontrando os contornos
@@ -364,102 +364,102 @@ Mat OtimizaImagens::calculateContours(Mat in){
     return drawing;
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
-void OtimizaImagens::adjustImagesKeyboard(){
-    // Imagem com a soma das imagens de arestas
-    Mat soma;
-    // Tecla pressionada
-    int t;
-    // Offsets em X e Y e passo em pixels de deslocamento
-    int offx = 0, offy = 0, passo = 5;
-    // Foco anterior e foco atual em X e Y
-    float fx_p = fx_l, fy_p = fy_l, fx_c = fx_l, fy_c = fy_l;
-    // Comeca a soma de imagens
-    Mat aux;
-    ed_clusters.copyTo(aux);
-    addWeighted(ed_cam, 1.0, aux, 1.0, 0.0, soma);
-    namedWindow("Ajuste teclado");
-    imshow("Ajuste teclado", soma);
-    // Loop sobre as teclas
-    while(t != 32){ // espaco acaba tudo
-        t = waitKey(0);
-        switch(t){
-        case 99: // letra c, para esquerda
-            offx -= passo;
-            break;
-        case 102: // letra f, para cima
-            offy -= passo;
-            break;
-        case 98: // letra b, para direita
-            offx += passo;
-            break;
-        case 118: // letra v, para baixo
-            offy += passo;
-            break;
-        case 97:  // letra a, reduz passo
-            if(passo > 2)
-                passo -= 1;
-            break;
-        case 115: // letra s, aumenta passo
-            passo += 1;
-            break;
-        case 105: // letra i, diminui foco em X
-            fx_c -= passo;
-            break;
-        case 111: // letra o, aumenta o foco em X
-            fx_c += passo;
-            break;
-        case 107: // letra k, diminui o foco em Y
-            fy_c -= passo;
-            break;
-        case 108: // letra l, aumenta o foco em Y
-            fy_c += passo;
-            break;
-        default:
-            break;
-        }
-        // Altera imagens com novos focos e atualiza valores dos focos
-//        ed_clusters = adjustImageByFocus(ed_clusters, fx_c/fx_p, fy_c/fy_p);
-        ed_clusters = adjustImageByProjection(ed_clusters, fx_c, fy_c, offx, offy);
-        fx_p = fx_c; fy_p = fy_c;
-        offx = 0; offy = 0; // Se for pra ajustar por projecao
-        ed_clusters.copyTo(aux); // A principio para nao depender do offset
-        // Cria a matriz com os offsets e desloca a danada dos clusters
-        if(offx != 0 || offy != 0){
-          Mat H = (cv::Mat_<double>(3,3) << 1, 0, offx, 0, 1, offy, 0, 0, 1);
-          warpPerspective(ed_clusters, aux, H, ed_clusters.size(), cv::INTER_LINEAR, cv::BORDER_CONSTANT, Scalar(0, 0, 0));
-        }
-        addWeighted(ed_cam, 1.0, aux, 1.0, 0.0, soma);
-        imshow("Ajuste teclado", soma);
-        cout << "\nOffset X: " << offx << "    Offset Y: " << offy << "    Passo: " << passo << "    Foco X: " << fx_c << endl;
-    }
-}
+//void OtimizaImagens::adjustImagesKeyboard(){
+//    // Imagem com a soma das imagens de arestas
+//    Mat soma;
+//    // Tecla pressionada
+//    int t;
+//    // Offsets em X e Y e passo em pixels de deslocamento
+//    int offx = 0, offy = 0, passo = 5;
+//    // Foco anterior e foco atual em X e Y
+//    float fx_p = fx_l, fy_p = fy_l, fx_c = fx_l, fy_c = fy_l;
+//    // Comeca a soma de imagens
+//    Mat aux;
+//    ed_clusters.copyTo(aux);
+//    addWeighted(ed_cam, 1.0, aux, 1.0, 0.0, soma);
+//    namedWindow("Ajuste teclado");
+//    imshow("Ajuste teclado", soma);
+//    // Loop sobre as teclas
+//    while(t != 32){ // espaco acaba tudo
+//        t = waitKey(0);
+//        switch(t){
+//        case 99: // letra c, para esquerda
+//            offx -= passo;
+//            break;
+//        case 102: // letra f, para cima
+//            offy -= passo;
+//            break;
+//        case 98: // letra b, para direita
+//            offx += passo;
+//            break;
+//        case 118: // letra v, para baixo
+//            offy += passo;
+//            break;
+//        case 97:  // letra a, reduz passo
+//            if(passo > 2)
+//                passo -= 1;
+//            break;
+//        case 115: // letra s, aumenta passo
+//            passo += 1;
+//            break;
+//        case 105: // letra i, diminui foco em X
+//            fx_c -= passo;
+//            break;
+//        case 111: // letra o, aumenta o foco em X
+//            fx_c += passo;
+//            break;
+//        case 107: // letra k, diminui o foco em Y
+//            fy_c -= passo;
+//            break;
+//        case 108: // letra l, aumenta o foco em Y
+//            fy_c += passo;
+//            break;
+//        default:
+//            break;
+//        }
+//        // Altera imagens com novos focos e atualiza valores dos focos
+////        ed_clusters = adjustImageByFocus(ed_clusters, fx_c/fx_p, fy_c/fy_p);
+//        ed_clusters = adjustImageByProjection(ed_clusters, fx_c, fy_c, offx, offy);
+//        fx_p = fx_c; fy_p = fy_c;
+//        offx = 0; offy = 0; // Se for pra ajustar por projecao
+//        ed_clusters.copyTo(aux); // A principio para nao depender do offset
+//        // Cria a matriz com os offsets e desloca a danada dos clusters
+//        if(offx != 0 || offy != 0){
+//          Mat H = (cv::Mat_<double>(3,3) << 1, 0, offx, 0, 1, offy, 0, 0, 1);
+//          warpPerspective(ed_clusters, aux, H, ed_clusters.size(), cv::INTER_LINEAR, cv::BORDER_CONSTANT, Scalar(0, 0, 0));
+//        }
+//        addWeighted(ed_cam, 1.0, aux, 1.0, 0.0, soma);
+//        imshow("Ajuste teclado", soma);
+//        cout << "\nOffset X: " << offx << "    Offset Y: " << offy << "    Passo: " << passo << "    Foco X: " << fx_c << endl;
+//    }
+//}
 /////////////////////////////////////////////////////////////////////////////////////////////////
-Mat OtimizaImagens::adjustImageByFocus(Mat in, float fx_r, float fy_r){
-    // Procura os pixels que nao sao 0, tem distancia, na matriz de distancias
-    Mat temp_edge = Mat::zeros(in.size()     , in.type()     );
-    #pragma omp parallel for num_threads(100)
-    for(int i=0; i<in.cols; i++){
-        for(int j=0; j<in.rows; j++){
-//            if(dist_pixel > 0){
-                // Pegar a posicao antiga e achar uma nova com a taxa entre os focos
-                float u = float(i) * fx_r;// * dist_float;
-                float v = float(j) * fy_r;// * dist_float;
-                // Se cair dentro das dimensoes das imagens, prosseguir
-                if(u > 0 && u < in.cols && v > 0 && v < in.rows){
-                    // Alterar na nova imagem de arestas
-                    temp_edge.at<Vec3b>(Point(int(u),int(v)))          = in.at<Vec3b>(Point(i,j));
-                }
-//            }
-        }
-    }
-
-    // Retornar a imagem temporaria de arestas nova
-    return temp_edge;
-}
-/////////////////////////////////////////////////////////////////////////////////////////////////
-Mat OtimizaImagens::adjustImageByProjection(Mat in, float fx, float fy, float tx, float ty){
+//Mat OtimizaImagens::adjustImageByFocus(Mat in, float fx_r, float fy_r){
 //    // Procura os pixels que nao sao 0, tem distancia, na matriz de distancias
-    Mat temp_edge  = Mat::zeros(in.size()      , in.type()     );
+//    Mat temp_edge = Mat::zeros(in.size()     , in.type()     );
+//    #pragma omp parallel for num_threads(100)
+//    for(int i=0; i<in.cols; i++){
+//        for(int j=0; j<in.rows; j++){
+////            if(dist_pixel > 0){
+//                // Pegar a posicao antiga e achar uma nova com a taxa entre os focos
+//                float u = float(i) * fx_r;// * dist_float;
+//                float v = float(j) * fy_r;// * dist_float;
+//                // Se cair dentro das dimensoes das imagens, prosseguir
+//                if(u > 0 && u < in.cols && v > 0 && v < in.rows){
+//                    // Alterar na nova imagem de arestas
+//                    temp_edge.at<Vec3b>(Point(int(u),int(v)))          = in.at<Vec3b>(Point(i,j));
+//                }
+////            }
+//        }
+//    }
+
+//    // Retornar a imagem temporaria de arestas nova
+//    return temp_edge;
+//}
+/////////////////////////////////////////////////////////////////////////////////////////////////
+//Mat OtimizaImagens::adjustImageByProjection(Mat in, float fx, float fy, float tx, float ty){
+//    // Procura os pixels que nao sao 0, tem distancia, na matriz de distancias
+//    Mat temp_edge  = Mat::zeros(in.size()      , in.type()     );
 //    Mat temp_nuvem = Mat::zeros(im_nuvem.size(), im_nuvem.type());
 //    // Matriz intrinseca do laser
 //    Eigen::Matrix3f Kl;
@@ -506,9 +506,9 @@ Mat OtimizaImagens::adjustImageByProjection(Mat in, float fx, float fy, float tx
 //    // Renovar a imagem da nuvem organizada de dentro da classe
 //    temp_nuvem.copyTo(im_nuvem);
 
-    // Retornar a imagem temporaria de arestas nova
-    return temp_edge;
-}
+//    // Retornar a imagem temporaria de arestas nova
+//    return temp_edge;
+//}
 /////////////////////////////////////////////////////////////////////////////////////////////////
 Mat OtimizaImagens::getImage(string nome){
     if(nome == "rgb"){
@@ -535,8 +535,8 @@ Mat OtimizaImagens::removeOuterEdges(Mat in){
     // Calcula a media do raio em relacao ao centro da imagem
     float raio_medio = raio_sum / cont;
     // Passa por toda a imagem de novo e altera a cor do pixel que esta fora de X vezes o raio
-#pragma omp parallel for num_threads(100)
     cor.val[0] = 0; cor.val[1] = 0; cor.val[2] = 0;
+#pragma omp parallel for num_threads(100)
     for(int j=0; j < in.rows; j++){
         for(int i=0; i < in.cols; i++){
             float raio = sqrt( pow(cx - i, 2) + pow(cy - j, 2) );
@@ -546,5 +546,72 @@ Mat OtimizaImagens::removeOuterEdges(Mat in){
     }
 
     return in;
+}
+/////////////////////////////////////////////////////////////////////////////////////////////////
+float OtimizaImagens::FOB(Mat rgb, Mat clu){
+    // Escala de cinza para tirar cores especificas
+    Mat rgbgray, clugray;
+    cvtColor(rgb, rgbgray, CV_BGR2GRAY);
+    cvtColor(clu, clugray, CV_BGR2GRAY);
+    /// Se nao ha nada na vizinhanca da outra imagem, nao ha porque analisar, eliminar
+    // Tamanho da janela de busca e flag de busca
+    int janela = 2;
+    bool encontrado = false;
+    // Copias das imagens originais em escala de cinza
+    Mat rgb_original, clu_original;
+    rgbgray.copyTo(rgb_original); clugray.copyTo(clu_original);
+    // Varre as dimensoes das imagens
+#pragma omp parallel for num_threads(100)
+    for(int i=0+janela; i < rgbgray.cols-janela; i++){
+        for(int j=0+janela; j < rgbgray.rows-janela; j++){
+            // Procurar pela vizinhanca na imagem de clusters, se nao encontrado ninguem, pinta de preto a rgb gray
+            encontrado = false;
+            for(int k=-janela; k < janela; k++){
+                for(int l=-janela; l < janela; l++){
+                    if(encontrado)
+                        break;
+                    if(clu_original.at<uchar>(Point(i+k, j+l)) > 0 && !encontrado){
+                        encontrado = true;
+                        break;
+                    }
+                }
+            }
+//            if(!encontrado)
+                rgbgray.at<uchar>(Point(i, j)) == 0;
+            // Procurar pela vizinhanca na imagem de rgb, se nao encontrado ninguem, pinta de preto a clu gray
+            encontrado = false;
+            for(int k=-janela; k < janela; k++){
+                for(int l=-janela; l < janela; l++){
+                    if(encontrado)
+                        break;
+                    if(rgb_original.at<uchar>(Point(i+k, j+l)) > 0 && !encontrado){
+                        encontrado = true;
+                        break;
+                    }
+                }
+            }
+//            if(!encontrado)
+                clugray.at<uchar>(Point(i, j)) == 0;
+        }
+    }
+    // Passa um filtro gaussiano nas imagens?
+//    blur(rgbgray, rgbgray, Size(5, 5));
+//    blur(clugray, clugray, Size(5, 5));
+    imshow("rgb", rgbgray);
+    imshow("clu", clugray);
+    waitKey(0);
+    cvDestroyAllWindows();
+    // Variavel a ter a soma das diferencas de pixels
+    float fob = 0;
+    // Loop sobre as imagens e somando na variavel
+    for(int i=0; i < rgb.cols; i++){
+        for(int j=0; j < rgb.rows; j++){
+            // Se houver diferenca nas imagens, somar
+            if( abs(rgbgray.at<uchar>(Point(i, j)) - clugray.at<uchar>(Point(i, j))) > 0 && (rgbgray.at<uchar>(Point(i, j)) > 0 || clugray.at<uchar>(Point(i, j)) > 0) )
+                fob++;
+        }
+    }
+
+    return fob;
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////

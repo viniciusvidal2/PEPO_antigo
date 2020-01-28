@@ -42,23 +42,25 @@ public:
   OtimizaImagens(std::string p, std::string icam, std::string iclu, std::string id);
   virtual ~OtimizaImagens();
 
-  void calculateEdgesOnImages();
+//  void calculateEdgesOnImages();
   Mat calculateEdgeFromOriginalImage(Mat image, string nome);
   Mat calculateHoughTransformFromOriginalImage(Mat in, string nome);
   void saveEdgeImages();
-  void calcAndMatchFeatures();
-  void adjustImagesKeyboard();
+//  void calcAndMatchFeatures();
+//  void adjustImagesKeyboard();
 
   Mat getImage(std::string nome);
   Mat correctColorCluster(Mat in);
 
+  float FOB(Mat rgb, Mat clu);
+
 private:
   // Métodos
   Vec3b findPredominantColor(int u, int v, Mat in, int desvio);
-  Mat calculateBlobs(Mat in);
+//  Mat calculateBlobs(Mat in);
   Mat calculateContours(Mat in);
-  Mat adjustImageByFocus(Mat in, float fx_r, float fy_r);
-  Mat adjustImageByProjection(Mat in, float fx, float fy, float tx, float ty);
+//  Mat adjustImageByFocus(Mat in, float fx_r, float fy_r);
+//  Mat adjustImageByProjection(Mat in, float fx, float fy, float tx, float ty);
   Mat removeOuterEdges(Mat in);
 
   // Arquivos de imagem
