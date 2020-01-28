@@ -89,13 +89,13 @@ void Clusters::extractClustersRegionGrowing(PointCloud<PointTN>::Ptr in, vector<
     reg.extract(clusters_ind);
     // Passa para o vetor de nuvens da rotina principal
     clust.resize(clusters_ind.size());
-    ExtractIndices<PointTN> extract;
-    extract.setInputCloud(in);
-    extract.setNegative(false);
-    PointIndices::Ptr temp (new PointIndices);
     #pragma omp parallel for
     for(size_t i=0; i<clusters_ind.size(); i++){
+        PointIndices::Ptr temp (new PointIndices);
         *temp = clusters_ind[i];
+        ExtractIndices<PointTN> extract;
+        extract.setInputCloud(in);
+        extract.setNegative(false);
         extract.setIndices(temp);
         extract.filter(clust[i]);
         temp->indices.clear();
@@ -143,13 +143,13 @@ void Clusters::extractClustersRegionGrowingRGB(PointCloud<PointTN>::Ptr in, vect
     reg.extract(clusters_ind);
     // Passa para o vetor de nuvens da rotina principal
     clust.resize(clusters_ind.size());
-    ExtractIndices<PointTN> extract;
-    extract.setInputCloud(in);
-    extract.setNegative(false);
-    PointIndices::Ptr temp (new PointIndices);
     #pragma omp parallel for
     for(size_t i=0; i<clusters_ind.size(); i++){
+        PointIndices::Ptr temp (new PointIndices);
         *temp = clusters_ind[i];
+        ExtractIndices<PointTN> extract;
+        extract.setInputCloud(in);
+        extract.setNegative(false);
         extract.setIndices(temp);
         extract.filter(clust[i]);
         temp->indices.clear();
@@ -170,13 +170,13 @@ void Clusters::extractClustersEuclidian(PointCloud<PointTN>::Ptr in, vector<Poin
     eucl.extract(clusters_ind);
     // Passa para o vetor de nuvens da rotina principal
     clust.resize(clusters_ind.size());
-    ExtractIndices<PointTN> extract;
-    extract.setInputCloud(in);
-    extract.setNegative(false);
-    PointIndices::Ptr temp (new PointIndices);
     #pragma omp parallel for
     for(size_t i=0; i<clusters_ind.size(); i++){
+        PointIndices::Ptr temp (new PointIndices);
         *temp = clusters_ind[i];
+        ExtractIndices<PointTN> extract;
+        extract.setInputCloud(in);
+        extract.setNegative(false);
         extract.setIndices(temp);
         extract.filter(clust[i]);
         temp->indices.clear();
@@ -213,7 +213,7 @@ void Clusters::setColorPallete(size_t l){
 /////////////////////////////////////////////////////////////////////////////////////////////////
 void Clusters::colorCloud(PointCloud<PointTN>::Ptr cloud, size_t i){
     // Colorir agora com a cor certa na paleta de cores
-    #pragma omp for num_threads(int(cloud.size()/10))
+    #pragma omp parallel for
     for(size_t j=0; j < cloud->size(); j++){
         cloud->points[j].r = pal_r[i];
         cloud->points[j].g = pal_g[i];

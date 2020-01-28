@@ -40,7 +40,7 @@ void ProcessCloud::calculateNormals(PointCloud<PointT>::Ptr in, PointCloud<Point
     removeNaNNormalsFromPointCloud(*acc_normal, *acc_normal, indicesnan);
 
     // Forcar virar as normais na marra para a origem
-#pragma omp parallel for num_threads(acc_normal->size()/10);
+#pragma omp parallel for
     for(size_t i=0; i < acc_normal->size(); i++){
         Eigen::Vector3f normal, cp;
         normal << acc_normal->points[i].normal_x, acc_normal->points[i].normal_y, acc_normal->points[i].normal_z;
@@ -85,8 +85,7 @@ void ProcessCloud::calculateNormals(PointCloud<PointTN>::Ptr acc_normal){
 /////////////////////////////////////////////////////////////////////////////////////////////////
 void ProcessCloud::colorCloudThroughDistance(PointCloud<PointTN>::Ptr nuvem){
     // Varre nuvem atras da maior e menor distancia
-    float mindist = 1000, maxdist = 0, scale, dev = 400;
-    float r, g, b;
+    float mindist = 1000, maxdist = 0, dev = 400;
     float alpha = 250.0 / normaldist(0, 0, dev);
     std::vector<float> dists(nuvem->size());
     for(size_t i=0; i < nuvem->size(); i++){
@@ -97,11 +96,11 @@ void ProcessCloud::colorCloudThroughDistance(PointCloud<PointTN>::Ptr nuvem){
             mindist = dists[i];
     }
     // Calcula distancias de cada ponto, regra sobre a distancia e atribui cor
-    #pragma omp parallel for num_threads(10)
+    #pragma omp parallel for
     for(size_t i=0; i < nuvem->size(); i++){
-        scale = 750 * (dists[i] - mindist)/(maxdist - mindist);
+        float scale = 750 * (dists[i] - mindist)/(maxdist - mindist);
         // Pegar a cor como funcao normal
-        r = alpha*normaldist(scale, 0, dev); g = alpha*normaldist(scale, 390, dev); b = alpha*normaldist(scale, 750, dev);
+        float r = alpha*normaldist(scale, 0, dev), g = alpha*normaldist(scale, 390, dev), b = alpha*normaldist(scale, 750, dev);
 
         nuvem->points[i].r = r;
         nuvem->points[i].g = g;
@@ -120,13 +119,9 @@ void ProcessCloud::transformToCameraFrame(PointCloud<PointTN>::Ptr nuvem){
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
 void ProcessCloud::createVirtualLaserImage(PointCloud<PointTN>::Ptr nuvem, string nome){
-    // Imagem com as distancias para serem usadas na otimizacao e outra com a nuvem inteira
-//    Mat dists(Size(cam_w, cam_h), CV_16UC1, Scalar(0, 0, 0));
-//    Mat index(Size(cam_w, cam_h), CV_16UC1, Scalar(0, 0, 0));
-//    Mat oc(   Size(cam_w, cam_h), CV_16UC3, Scalar(0, 0, 0)); // organized cloud
     // Projetar os pontos na foto virtual e colorir imagem
     Mat fl(Size(cam_w, cam_h), CV_8UC3, Scalar(0, 0, 0)); // Mesmas dimensoes que a camera tiver
-    #pragma omp parallel for num_threads(100)
+    #pragma omp parallel for
     for(size_t i = 0; i < nuvem->size(); i++){
         /// Pegar ponto em coordenadas normais
         Eigen::MatrixXf X_(3, 1);
@@ -136,32 +131,16 @@ void ProcessCloud::createVirtualLaserImage(PointCloud<PointTN>::Ptr nuvem, strin
         Eigen::MatrixXf X = K_cam*X_;
         X = X/X(2, 0);
         /// Adicionando ponto na imagem se for o caso de projetado corretamente (para otimizacao de foco so funciona a menos de 65 metros)
-        if(floor(X(0,0)) >= 0 && floor(X(0,0)) < fl.cols && floor(X(1,0)) >= 0 && floor(X(1,0)) < fl.rows && X_(2, 0) < 64){
+        if(floor(X(0,0)) >= 0 && floor(X(0,0)) < fl.cols && floor(X(1,0)) >= 0 && floor(X(1,0)) < fl.rows){
             cv::Vec3b cor;
             cor.val[0] = nuvem->points[i].b; cor.val[1] = nuvem->points[i].g; cor.val[2] = nuvem->points[i].r;
             fl.at<Vec3b>(Point(int(X(0,0)), int(X(1,0)))) = cor;
-//            // Salva a distancia que estava naquele pixel
-//            dists.at<unsigned short>(Point(int(X(0,0)), int(X(1,0)))) = static_cast<unsigned short>( int((X_(2, 0)+3)*1000.0) ); // Converte para milimetros e pega como inteiro
-//            // Salva os valores de X, Y e Z na imagem da nuvem organizada
-//            Vec3w P;
-//            P.val[0] = static_cast<unsigned short>( int((X_(0, 0)+3)*1000.0) );
-//            P.val[1] = static_cast<unsigned short>( int((X_(1, 0)+3)*1000.0) );
-//            P.val[2] = static_cast<unsigned short>( int((X_(2, 0)+3)*1000.0) );
-//            oc.at<Vec3w>(Point(int(X(0,0)), int(X(1,0)))) = P;
-//            // Salva o indice do ponto na imagem de indices - otimizacao
-//            index.at<unsigned short>(Point(int(X(0,0)), int(X(1,0)))) = i;
         }
     }
     // Corrigir os ruidos cinzas antes de salvar
     fl = correctColorCluster(fl);
     // Salva de uma vez a foto do laser
     saveImage(fl, nome);
-//    // Salva a foto das distancias
-//    saveImage(dists, "distancias");
-//    // Salva a imagem com 3 canais para a nuvem organizada
-//    saveImage(oc, "nuvem_organizada");
-//    // Salva a imagem com indices da nuvem de pontos
-//    saveImage(index, "indices_da_nuvem");
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
 Mat ProcessCloud::projectCloudToLaserCenter(PointCloud<PointTN>::Ptr cloud, float fx, float fy, float tx, float ty, Size s){
@@ -177,7 +156,7 @@ Mat ProcessCloud::projectCloudToLaserCenter(PointCloud<PointTN>::Ptr cloud, floa
           0, 0, 1,    0    ;
     Eigen::MatrixXf P(3, 4);
     P = K*Rt;
-#pragma omp parallel for num_threads(100)
+    #pragma omp parallel for
     for(size_t i = 0; i < cloud->size(); i++){
         // Pegar ponto em coordenadas homogeneas
         Eigen::MatrixXf X_(4, 1);
@@ -246,7 +225,7 @@ void ProcessCloud::filterCloudDepthCovariance(PointCloud<PointTN>::Ptr cloud, in
     KdTreeFLANN<PointTN>::Ptr tree (new KdTreeFLANN<PointTN>);
     tree->setInputCloud(cloud);
     // Varrer todos os pontos atras da covariancia
-    #pragma omp parallel for num_threads(cloud->size()/10)
+    #pragma omp parallel for
     for(size_t i=0; i<cloud->size(); i++){
         // Cria variaveis aqui dentro pelo processo ser paralelizado
         Eigen::Vector4f centroide;
@@ -283,7 +262,7 @@ void ProcessCloud::filterCloudDepthCovariance(PointCloud<PointTN>::Ptr cloud, in
             outliers->indices.push_back(i);
     }
     // Extrair pontos da nuvem
-    ROS_INFO("Serao extraidos %zu pontos da nuvem, %.2f por cento.", outliers->indices.size(), float(outliers->indices.size())/float(cloud->size()));
+    ROS_INFO("Serao extraidos %zu pontos da nuvem, %.2f por cento.", outliers->indices.size(), 100*float(outliers->indices.size())/float(cloud->size()));
     extract.setInputCloud(cloud);
     extract.setNegative(true);
     extract.setIndices(outliers);
@@ -320,7 +299,7 @@ Mat ProcessCloud::correctColorCluster(Mat in){
     // Limite da vizinhanca (pixels) a ser varrido em busca de uma moda de cor
     int lim = 5;
     // Varrer todos os pixels e achar os que sao cinza (excluindo as bordas segundo limite de vizinhanca)
-    #pragma omp parallel for num_threads(100)
+    #pragma omp parallel for
     for(int u=0+lim; u<in.cols-lim; u++){
         for(int v=0+lim; v<in.rows-lim; v++){
             // Se for preto, varrer os vizinhos

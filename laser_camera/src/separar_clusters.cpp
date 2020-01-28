@@ -70,8 +70,8 @@ int main(int argc, char **argv)
     sor.setNegative(false);
     sor.filter(*filtrada);
 
-//    ROS_INFO("Filtrando ruidos radiais ...");
-//    pc.filterCloudDepthCovariance(filtrada, 50, 1.5);
+    ROS_INFO("Filtrando ruidos radiais ...");
+    pc.filterCloudDepthCovariance(filtrada, 50, 1.5);
     *filtrada = *inicial;
 
     // Extrai um vetor de planos e retorna nuvem sem eles

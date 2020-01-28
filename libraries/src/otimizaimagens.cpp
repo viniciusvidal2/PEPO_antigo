@@ -164,7 +164,7 @@ Mat OtimizaImagens::correctColorCluster(Mat in){
     // Limite da vizinhanca (pixels) a ser varrido em busca de uma moda de cor
     int lim = 5;
     // Varrer todos os pixels e achar os que sao cinza (excluindo as bordas segundo limite de vizinhanca)
-    #pragma omp parallel for num_threads(100)
+    #pragma omp parallel for
     for(int u=0+lim; u<in.cols-lim; u++){
         for(int v=0+lim; v<in.rows-lim; v++){
             // Se for cinza, varrer os vizinhos
@@ -437,7 +437,7 @@ Mat OtimizaImagens::calculateContours(Mat in){
 //Mat OtimizaImagens::adjustImageByFocus(Mat in, float fx_r, float fy_r){
 //    // Procura os pixels que nao sao 0, tem distancia, na matriz de distancias
 //    Mat temp_edge = Mat::zeros(in.size()     , in.type()     );
-//    #pragma omp parallel for num_threads(100)
+//    #pragma omp parallel for
 //    for(int i=0; i<in.cols; i++){
 //        for(int j=0; j<in.rows; j++){
 ////            if(dist_pixel > 0){
@@ -472,7 +472,7 @@ Mat OtimizaImagens::calculateContours(Mat in){
 //          0, 0, 1,    0    ;
 //    Eigen::MatrixXf P = Kl*Rt;
 //    // Loop de teste de projecao
-//    #pragma omp parallel for num_threads(100)
+//    #pragma omp parallel for
 //    for(int i=0; i<in.cols; i++){
 //        for(int j=0; j<in.rows; j++){
 //            // Se ha distancia em Z, recalcular a posicao (u, v) daquele pixel na imagem de arestas do laser
@@ -536,7 +536,7 @@ Mat OtimizaImagens::removeOuterEdges(Mat in){
     float raio_medio = raio_sum / cont;
     // Passa por toda a imagem de novo e altera a cor do pixel que esta fora de X vezes o raio
     cor.val[0] = 0; cor.val[1] = 0; cor.val[2] = 0;
-#pragma omp parallel for num_threads(100)
+#pragma omp parallel for
     for(int j=0; j < in.rows; j++){
         for(int i=0; i < in.cols; i++){
             float raio = sqrt( pow(cx - i, 2) + pow(cy - j, 2) );
@@ -549,23 +549,32 @@ Mat OtimizaImagens::removeOuterEdges(Mat in){
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
 float OtimizaImagens::FOB(Mat rgb, Mat clu){
+    // Variavel a ter a soma das diferencas de pixels
+    float fob = 0;
     // Escala de cinza para tirar cores especificas
     Mat rgbgray, clugray;
     cvtColor(rgb, rgbgray, CV_BGR2GRAY);
     cvtColor(clu, clugray, CV_BGR2GRAY);
+    // Passa um filtro gaussiano nas imagens?
+    blur(rgbgray, rgbgray, Size(3, 3));
+    blur(clugray, clugray, Size(3, 3));
     /// Se nao ha nada na vizinhanca da outra imagem, nao ha porque analisar, eliminar
-    // Tamanho da janela de busca e flag de busca
-    int janela = 2;
-    bool encontrado = false;
+    // Tamanho da janela de busca
+    int janela = 20;
     // Copias das imagens originais em escala de cinza
     Mat rgb_original, clu_original;
     rgbgray.copyTo(rgb_original); clugray.copyTo(clu_original);
     // Varre as dimensoes das imagens
-#pragma omp parallel for num_threads(100)
+#pragma omp parallel for
     for(int i=0+janela; i < rgbgray.cols-janela; i++){
         for(int j=0+janela; j < rgbgray.rows-janela; j++){
+            // Trazer todos os pixels nao pretos para 250 - ajuda na FOB
+            if(rgbgray.at<uchar>(Point(i, j))  > 0)
+                rgbgray.at<uchar>(Point(i, j)) = 250;
+            if(clugray.at<uchar>(Point(i, j))  > 0)
+                clugray.at<uchar>(Point(i, j)) = 250;
             // Procurar pela vizinhanca na imagem de clusters, se nao encontrado ninguem, pinta de preto a rgb gray
-            encontrado = false;
+            bool encontrado = false;
             for(int k=-janela; k < janela; k++){
                 for(int l=-janela; l < janela; l++){
                     if(encontrado)
@@ -576,8 +585,8 @@ float OtimizaImagens::FOB(Mat rgb, Mat clu){
                     }
                 }
             }
-//            if(!encontrado)
-                rgbgray.at<uchar>(Point(i, j)) == 0;
+            if(!encontrado)
+                rgbgray.at<uchar>(Point(i, j)) = 0;
             // Procurar pela vizinhanca na imagem de rgb, se nao encontrado ninguem, pinta de preto a clu gray
             encontrado = false;
             for(int k=-janela; k < janela; k++){
@@ -590,27 +599,24 @@ float OtimizaImagens::FOB(Mat rgb, Mat clu){
                     }
                 }
             }
-//            if(!encontrado)
-                clugray.at<uchar>(Point(i, j)) == 0;
+            if(!encontrado)
+                clugray.at<uchar>(Point(i, j)) = 0;
         }
     }
-    // Passa um filtro gaussiano nas imagens?
-//    blur(rgbgray, rgbgray, Size(5, 5));
-//    blur(clugray, clugray, Size(5, 5));
-    imshow("rgb", rgbgray);
-    imshow("clu", clugray);
-    waitKey(0);
-    cvDestroyAllWindows();
-    // Variavel a ter a soma das diferencas de pixels
-    float fob = 0;
-    // Loop sobre as imagens e somando na variavel
-    for(int i=0; i < rgb.cols; i++){
-        for(int j=0; j < rgb.rows; j++){
-            // Se houver diferenca nas imagens, somar
-            if( abs(rgbgray.at<uchar>(Point(i, j)) - clugray.at<uchar>(Point(i, j))) > 0 && (rgbgray.at<uchar>(Point(i, j)) > 0 || clugray.at<uchar>(Point(i, j)) > 0) )
-                fob++;
+
+    // Se houver diferenca nas imagens, somar na fob algo ali referente a diferenca de arestas
+    for(int i=0; i < rgbgray.cols; i++){
+        for(int j=0; j < rgbgray.rows; j++){
+            if(rgbgray.at<uchar>(Point(i, j)) > 0 || clugray.at<uchar>(Point(i, j)) > 0){
+                if( abs(rgbgray.at<uchar>(Point(i, j)) - clugray.at<uchar>(Point(i, j))) > 0 )
+                    fob += 2;
+            }
         }
     }
+//    imshow("clu", clugray);
+//    imshow("rgb", rgbgray);
+//    waitKey(0);
+//    cvDestroyAllWindows();
 
     return fob;
 }

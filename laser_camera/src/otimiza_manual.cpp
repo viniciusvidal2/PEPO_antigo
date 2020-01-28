@@ -44,7 +44,6 @@ int main(int argc, char **argv)
 
     // Inicia classes de funcoes para imagens, otimizacao e nuvem
     ROS_INFO("Carregando dados para processar ...");
-    Clusters cl;
     ProcessCloud pc;
 
     std::string im_rgb = "camera_rgb.png", im_clu = "imagem_clusters.png", im_dep = "imagem_virtual.png";
@@ -144,6 +143,7 @@ int main(int argc, char **argv)
 //            edges_clusters        = oi.calculateHoughTransformFromOriginalImage(edges_clusters, "clusters");
 
             // Aplicando a fob aqui para ver como sai
+            ROS_INFO("Calculando a FOB ...");
             fob = oi.FOB(edges_rgb, edges_clusters);
             ROS_INFO("Valor da FOB na iteracao: %.2f", fob);
 
