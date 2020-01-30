@@ -26,7 +26,8 @@ void Clusters::obtainPlanes(PointCloud<PointTN>::Ptr in, vector<PointCloud<Point
     PointCloud<PointTN>::Ptr temp (new PointCloud<PointTN>), plane (new PointCloud<PointTN>), cloud_f (new PointCloud<PointTN>);
     *temp = *in;
     int nr_points = (int) temp->points.size();
-    while(temp->size() > 0.6*nr_points){ // Ainda podem haver planos significativos
+    int contador_iteracoes = 0;
+    while(temp->size() > 0.6*nr_points && contador_iteracoes < 30){ // Ainda podem haver planos significativos
         seg.setInputCloud(temp);
         seg.segment(*inliers, *coefficients);
         if (inliers->indices.size() == 0){
@@ -46,6 +47,7 @@ void Clusters::obtainPlanes(PointCloud<PointTN>::Ptr in, vector<PointCloud<Point
         *temp = *cloud_f;
         // Adiciona ao vetor o plano obtido
         planos.push_back(*plane);
+        contador_iteracoes++;
     }
     // Passar o que sobrou sem planos para a funcao principal
     *out = *temp;

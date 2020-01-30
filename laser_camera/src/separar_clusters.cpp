@@ -66,24 +66,28 @@ int main(int argc, char **argv)
     StatisticalOutlierRemoval<PointTN> sor;
     sor.setInputCloud(inicial);
     sor.setMeanK(10);
-    sor.setStddevMulThresh(3);
+    sor.setStddevMulThresh(2.5);
     sor.setNegative(false);
     sor.filter(*filtrada);
 
     ROS_INFO("Filtrando ruidos radiais ...");
     pc.filterCloudDepthCovariance(filtrada, 50, 1.5);
-    *filtrada = *inicial;
+
+    ROS_INFO("Salvando a nuvem filtrada por covariancia ...");
+    savePLYFileASCII<PointTN>(std::string(home)+"/Desktop/Dados_B9/nuvem_filtrada_covariancia.ply", *filtrada);
+//    loadPLYFile<PointTN>(std::string(home)+"/Desktop/Dados_B9/nuvem_filtrada_covariancia.ply", *filtrada);
 
     // Extrai um vetor de planos e retorna nuvem sem eles
-    ROS_INFO("Obtendo planos na nuvem ...");
-    cl.obtainPlanes(filtrada, vetor_planos, filtrada_sem_planos);
-    cl.separateClustersByDistance(vetor_planos);
-    ROS_INFO("Foram obtidos %zu planos.", vetor_planos.size());
+//    ROS_INFO("Obtendo planos na nuvem ...");
+//    cl.obtainPlanes(filtrada, vetor_planos, filtrada_sem_planos);
+//    cl.separateClustersByDistance(vetor_planos);
+//    ROS_INFO("Foram obtidos %zu planos.", vetor_planos.size());
 
     // Extrai clusters da nuvem de pontos que restou
+    *filtrada_sem_planos = *filtrada;
     ROS_INFO("Obtendo clusters para o restante da nuvem ...");
     cl.extractClustersRegionGrowingRGB(filtrada_sem_planos, vetor_clusters);
-    cl.separateClustersByDistance(vetor_clusters);
+//    cl.separateClustersByDistance(vetor_clusters);
     ROS_INFO("Foram obtidos %zu clusters.", vetor_clusters.size());
 
     // Definindo paleta de cores de cada plano e cluster
