@@ -26,14 +26,16 @@ catkin_package(CATKIN_DEPENDS DEPENDS OpenMP)
 add_executable(processar_node src/processar.cpp ../libraries/src/processcloud.cpp)
 target_link_libraries(processar_node ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS} ${OpenMP_LIBS})
 
+add_executable(processar_online_node src/processar_online.cpp ../libraries/src/processcloud.cpp)
+target_compile_options(processar_online_node PRIVATE ${OpenMP_FLAGS})
+add_dependencies(processar_online_node ${catkin_EXPORTED_TARGETS})
+target_link_libraries(processar_online_node ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS} ${OpenMP_LIBS})
+
 add_executable(otimizar_nuvem_node src/otimizar_nuvem.cpp ../libraries/src/processcloud.cpp)
 target_link_libraries(otimizar_nuvem_node ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS} ${OpenMP_LIBS})
 
 add_executable(clusters_node src/separar_clusters.cpp ../libraries/src/clusters.cpp ../libraries/src/processcloud.cpp)
 target_link_libraries(clusters_node ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS} ${OpenMP_LIBS})
-
-#add_executable(processa_imagens src/processa_imagens.cpp ../libraries/src/otimizaimagens.cpp)
-#target_link_libraries(processa_imagens ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS} ${OpenMP_LIBS})
 
 add_executable(otimiza_manual src/otimiza_manual.cpp ../libraries/src/clusters.cpp ../libraries/src/processcloud.cpp ../libraries/src/otimizaimagens.cpp)
 target_compile_options(otimiza_manual PRIVATE ${OpenMP_FLAGS})

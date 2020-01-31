@@ -79,13 +79,16 @@ public:
   void calculateNormals(PointCloud<PointTN>::Ptr acc_normal);
   void colorCloudThroughDistance(PointCloud<PointTN>::Ptr nuvem);
   void transformToCameraFrame(PointCloud<PointTN>::Ptr nuvem);
+  void transformToCameraFrame(PointCloud<PointT>::Ptr nuvem);
   void createVirtualLaserImage(PointCloud<PointTN>::Ptr nuvem, std::string nome);
-  void saveCloud(PointCloud<PointTN>::Ptr nuvem);
+  void saveCloud(PointCloud<PointTN>::Ptr nuvem, string nome);
+  void saveCloud(PointCloud<PointT>::Ptr nuvem, string nome);
   void saveImage(cv::Mat img, std::string nome);
   void filterCloudDepthCovariance(PointCloud<PointTN>::Ptr cloud, int kn, float thresh);
 
   Mat projectCloudToLaserCenter(PointCloud<PointTN>::Ptr cloud, float fx, float fy, float tx, float ty, Size s);
   void colorCloudWithCalibratedImage(PointCloud<PointTN>::Ptr cloud_in, PointCloud<PointTN>::Ptr cloud_out, Mat image, float fx, float fy, float tx, float ty);
+  void colorCloudWithCalibratedImage(PointCloud<PointT>::Ptr cloud_in, PointCloud<PointT>::Ptr cloud_out, Mat image, float fx, float fy, float tx, float ty);
 
 private:
   /// Metodos

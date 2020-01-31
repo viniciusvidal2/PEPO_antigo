@@ -7,6 +7,9 @@
 <!--<include file="$(find usb_cam)/launch/usb_cam.launch"/>-->
 
 <!--Lancar processamento dos dados vindos de cada um-->
-<node name="processar_node" pkg="laser_camera" type="processar_node" output="screen"/>
+<!--<node name="processar_node" pkg="laser_camera" type="processar_node" output="screen"/>-->
+
+<!--Lancar processamento dos dados vindos de cada um de forma rapida, online-->
+<node name="processar_online_node" pkg="laser_camera" type="processar_online_node" output="screen"/>
 
 </launch>

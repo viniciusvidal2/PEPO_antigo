@@ -118,6 +118,16 @@ void ProcessCloud::transformToCameraFrame(PointCloud<PointTN>::Ptr nuvem){
     transformPointCloudWithNormals(*nuvem, *nuvem, T);
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
+void ProcessCloud::transformToCameraFrame(PointCloud<PointT>::Ptr nuvem){
+    // Rotacionar a nuvem para cair no frame da câmera (laser tem X para frente, câmera deve ter
+    // Z para frente e X para o lado
+    Eigen::Matrix3f R;
+    R = Eigen::AngleAxisf(M_PI/2, Eigen::Vector3f::UnitZ()) * Eigen::AngleAxisf(-M_PI/2, Eigen::Vector3f::UnitY());
+    Eigen::Matrix4f T = Eigen::Matrix4f::Identity();     // Matriz de transformaçao homogenea
+    T.block<3, 3>(0, 0) = R;                             // Adiciona a rotacao onde deve estar
+    transformPointCloud(*nuvem, *nuvem, T);
+}
+/////////////////////////////////////////////////////////////////////////////////////////////////
 void ProcessCloud::createVirtualLaserImage(PointCloud<PointTN>::Ptr nuvem, string nome){
     // Projetar os pontos na foto virtual e colorir imagem
     Mat fl(Size(cam_w, cam_h), CV_8UC3, Scalar(0, 0, 0)); // Mesmas dimensoes que a camera tiver
@@ -212,7 +222,40 @@ void ProcessCloud::colorCloudWithCalibratedImage(PointCloud<PointTN>::Ptr cloud_
             }
         }
     }
-
+}
+/////////////////////////////////////////////////////////////////////////////////////////////////
+void ProcessCloud::colorCloudWithCalibratedImage(PointCloud<PointT>::Ptr cloud_in, PointCloud<PointT>::Ptr cloud_out, Mat image, float fx, float fy, float tx, float ty){
+    // Matriz intrinseca e extrinseca
+    Eigen::Matrix3f K;
+    K << fx,  0, image.cols/2.0,
+          0, fy, image.rows/2.0,
+          0,  0,      1      ;
+    Eigen::MatrixXf Rt(3, 4);
+    Rt << 1, 0, 0, tx/100.0,
+          0, 1, 0, ty/100.0,
+          0, 0, 1,    0    ;
+    Eigen::MatrixXf P(3, 4);
+    P = K*Rt;
+    for(size_t i = 0; i < cloud_in->size(); i++){
+        // Pegar ponto em coordenadas homogeneas
+        Eigen::MatrixXf X_(4, 1);
+        X_ << cloud_in->points[i].x,
+              cloud_in->points[i].y,
+              cloud_in->points[i].z,
+                        1          ;
+        Eigen::MatrixXf X(3, 1);
+        X = P*X_;
+        if(X(2, 0) > 0){
+            X = X/X(2, 0);
+            // Adicionando ponto na imagem se for o caso de projetado corretamente
+            if(floor(X(0,0)) > 0 && floor(X(0,0)) < image.cols && floor(X(1,0)) > 0 && floor(X(1,0)) < image.rows){
+                cv::Vec3b cor = image.at<Vec3b>(Point(X(0,0), X(1,0)));
+                PointT point = cloud_in->points[i];
+                point.b = cor.val[0]; point.g = cor.val[1]; point.r = cor.val[2];
+                cloud_out->push_back(point);
+            }
+        }
+    }
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
 void ProcessCloud::filterCloudDepthCovariance(PointCloud<PointTN>::Ptr cloud, int kn, float thresh){
@@ -269,13 +312,18 @@ void ProcessCloud::filterCloudDepthCovariance(PointCloud<PointTN>::Ptr cloud, in
     extract.filter(*cloud);
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
-void ProcessCloud::saveCloud(PointCloud<PointTN>::Ptr nuvem){
-    std::string nome_nuvem = pasta+"nuvem_final.ply";
+void ProcessCloud::saveCloud(PointCloud<PointTN>::Ptr nuvem, std::string nome){
+    std::string nome_nuvem = pasta + nome + ".ply";
     savePLYFileASCII<PointTN>(nome_nuvem, *nuvem);
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
+void ProcessCloud::saveCloud(PointCloud<PointT>::Ptr nuvem, std::string nome){
+    std::string nome_nuvem = pasta + nome + ".ply";
+    savePLYFileASCII<PointT>(nome_nuvem, *nuvem);
+}
+/////////////////////////////////////////////////////////////////////////////////////////////////
 void ProcessCloud::saveImage(cv::Mat img, string nome){
-    std::string final = pasta+nome+".png";
+    std::string final = pasta + nome + ".png";
     vector<int> params;
     params.push_back(CV_IMWRITE_PNG_COMPRESSION);
     params.push_back(9);

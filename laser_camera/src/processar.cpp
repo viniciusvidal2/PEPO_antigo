@@ -94,7 +94,7 @@ void laserCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
         // Salvar dados na pasta Dados_B9, no Desktop
         ROS_WARN("Salvando dados na pasta Dados_B9 ...");
         pc->saveImage(image_ptr->image, "camera_rgb");
-        pc->saveCloud(cloud_normals);
+        pc->saveCloud(cloud_normals, "nuvem_final");
         // Terminamos o processamento, travar tudo
         ROS_WARN("Tudo terminado, conferir na pasta!");
         fim_processo = true;
