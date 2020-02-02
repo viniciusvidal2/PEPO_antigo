@@ -52,6 +52,13 @@ public:
   Mat getImage(std::string nome);
   Mat correctColorCluster(Mat in);
 
+  // Estrutura de camera para retornar a rotina principal valores otimizados
+  struct camera{
+      camera() {}
+      float foco;
+      Eigen::Matrix4f T;
+  };
+  camera bat(float fx, float fy, float tx, float ty);
   float FOB(Mat rgb, Mat clu);
 
 private:

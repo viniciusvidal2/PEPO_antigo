@@ -61,13 +61,11 @@ Mat OtimizaImagens::calculateEdgeFromOriginalImage(Mat image, std::string nome){
     Mat cont;
     if(nome == "clusters"){
         cont = calculateContours(mask);
+        cont = removeOuterEdges(cont); // Remover as arestas do circulo externo pelo raio (caso clusters)
     } else if(nome == "rgb") {
         cont = Scalar::all(0);
         image.copyTo(cont, mask);
     }
-    // Remover as arestas do circulo externo pelo raio (caso clusters)
-    if(nome == "clusters")
-        cont = removeOuterEdges(cont);
 
     return cont;
 }
@@ -546,6 +544,33 @@ Mat OtimizaImagens::removeOuterEdges(Mat in){
     }
 
     return in;
+}
+/////////////////////////////////////////////////////////////////////////////////////////////////
+OtimizaImagens::camera OtimizaImagens::bat(float fx, float fy, float tx, float ty){
+    // Variavel de saida
+    camera c;
+
+    // Restricoes no espaco de busca para foco e translacao
+
+    // Parametros do algoritmo de bats
+
+    // Velocidades, taxa de emissao e amplitudes sonoras
+
+    // Vetor de fobs e controle de iteracoes
+
+    // Rolando uma vez a fob de cada bat para inicio de conversa
+
+    // Indice do menor valor da fob
+
+    //// Etapa iterativa do algoritmo ////
+
+    //////////////////////////////////////
+
+    // Tira os valores de normalizados para reais novamente
+
+    // Salva no objeto de camera final
+
+    return c;
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
 float OtimizaImagens::FOB(Mat rgb, Mat clu){
