@@ -31,10 +31,14 @@
 #include <Eigen/Dense>
 #include <Eigen/Core>
 
+#include "processcloud.h"
+
 using namespace cv;
 using namespace std;
 using namespace pcl;
 using namespace pcl::io;
+
+typedef PointXYZRGBNormal PointTN;
 
 class OtimizaImagens
 {
@@ -52,13 +56,6 @@ public:
   Mat getImage(std::string nome);
   Mat correctColorCluster(Mat in);
 
-  // Estrutura de camera para retornar a rotina principal valores otimizados
-  struct camera{
-      camera() {}
-      float foco;
-      Eigen::Matrix4f T;
-  };
-  camera bat(float fx, float fy, float tx, float ty);
   float FOB(Mat rgb, Mat clu);
 
 private:
@@ -69,6 +66,8 @@ private:
 //  Mat adjustImageByFocus(Mat in, float fx_r, float fy_r);
 //  Mat adjustImageByProjection(Mat in, float fx, float fy, float tx, float ty);
   Mat removeOuterEdges(Mat in);
+
+  // Objeto da classe de trabalho com a nuvem
 
   // Arquivos de imagem
   std::string pasta, arquivo_cam, arquivo_clusters, arquivo_depth;

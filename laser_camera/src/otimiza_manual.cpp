@@ -66,7 +66,7 @@ int main(int argc, char **argv)
     /// Loop com o teclado sobre o resultado da projecao ///
     ////////////////////////////////////////////////////////
 
-    // Funcao objeto
+    // Funcao objetivo
     float fob = 0;
 
     // Parametros para a funcao de projecao - intrinsecos da camera a principio

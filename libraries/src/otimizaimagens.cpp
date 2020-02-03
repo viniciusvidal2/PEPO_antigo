@@ -546,33 +546,6 @@ Mat OtimizaImagens::removeOuterEdges(Mat in){
     return in;
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
-OtimizaImagens::camera OtimizaImagens::bat(float fx, float fy, float tx, float ty){
-    // Variavel de saida
-    camera c;
-
-    // Restricoes no espaco de busca para foco e translacao
-
-    // Parametros do algoritmo de bats
-
-    // Velocidades, taxa de emissao e amplitudes sonoras
-
-    // Vetor de fobs e controle de iteracoes
-
-    // Rolando uma vez a fob de cada bat para inicio de conversa
-
-    // Indice do menor valor da fob
-
-    //// Etapa iterativa do algoritmo ////
-
-    //////////////////////////////////////
-
-    // Tira os valores de normalizados para reais novamente
-
-    // Salva no objeto de camera final
-
-    return c;
-}
-/////////////////////////////////////////////////////////////////////////////////////////////////
 float OtimizaImagens::FOB(Mat rgb, Mat clu){
     // Variavel a ter a soma das diferencas de pixels
     float fob = 0;
@@ -590,6 +563,7 @@ float OtimizaImagens::FOB(Mat rgb, Mat clu){
     Mat rgb_original, clu_original;
     rgbgray.copyTo(rgb_original); clugray.copyTo(clu_original);
     // Varre as dimensoes das imagens
+    omp_set_dynamic(1);
 #pragma omp parallel for
     for(int i=0+janela; i < rgbgray.cols-janela; i++){
         for(int j=0+janela; j < rgbgray.rows-janela; j++){
