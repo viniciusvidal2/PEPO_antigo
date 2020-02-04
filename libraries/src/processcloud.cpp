@@ -414,3 +414,38 @@ Vec3b ProcessCloud::findPredominantColor(int u, int v, Mat in, int desvio){
     return cores[indice_encontrado];
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
+void ProcessCloud::writeNVM(string nome, string nome_imagem, Eigen::VectorXf params){
+    // Cria o centro e o quaternion da camera
+    Eigen::VectorXf C(3);
+    C << -params(2)*0.01, -params(3)*0.01, 0; // Estao nessa casa do vetor de parametros o cx e cy -> converter para metros
+    Eigen::Quaternion<float> q = Eigen::Quaternion<float>::Identity();
+    // Tira a media do foco otimizado
+    float f = (params(0) + params(1))/2;
+    // Anota num arquivo a partir do nome vindo
+    ofstream nvm(nome);
+    if(nvm.is_open()){
+
+        nvm << "NVM_V3\n\n";
+        nvm << "1\n"; // Quantas imagens, sempre uma aqui
+        std::string linha_imagem = escreve_linha_imagem(f, nome_imagem, C, q); // Imagem com detalhes de camera
+        nvm << linha_imagem; // Imagem com detalhes de camera
+
+    } // fim do if is open
+    nvm.close(); // Fechar para nao ter erro
+}
+/////////////////////////////////////////////////////////////////////////////////////////////////
+std::string ProcessCloud::escreve_linha_imagem(float foco, std::string nome, Eigen::MatrixXf C, Eigen::Quaternion<float> q){
+    std::string linha = nome;
+    // Adicionar foco
+    linha = linha + " " + std::to_string(foco);
+    // Adicionar quaternion
+    linha = linha + " " + std::to_string(q.w()) + " " + std::to_string(q.x()) + " " + std::to_string(q.y()) + " " + std::to_string(q.z());
+    // Adicionar centro da camera
+    linha = linha + " " + std::to_string(C(0, 0)) + " " + std::to_string(C(1, 0)) + " " + std::to_string(C(2, 0));
+    // Adicionar distorcao radial (crendo 0) e 0 final
+    linha = linha + " 0 0\n"; // IMPORTANTE pular linha aqui, o MeshRecon precisa disso no MART
+    // Muda as virgulas por pontos no arquivo
+    std::replace(linha.begin(), linha.end(), ',', '.');
+    return linha;
+}
+/////////////////////////////////////////////////////////////////////////////////////////////////

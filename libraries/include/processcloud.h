@@ -90,16 +90,20 @@ public:
   void colorCloudWithCalibratedImage(PointCloud<PointTN>::Ptr cloud_in, PointCloud<PointTN>::Ptr cloud_out, Mat image, float fx, float fy, float tx, float ty);
   void colorCloudWithCalibratedImage(PointCloud<PointT>::Ptr cloud_in, PointCloud<PointT>::Ptr cloud_out, Mat image, float fx, float fy, float tx, float ty);
 
+  void writeNVM(std::string nome, std::string nome_imagem, Eigen::VectorXf params);
+
 private:
   /// Metodos
   float normaldist(float x, float media, float dev);
   Eigen::Matrix3f euler2matrix(float r, float p, float y);
   Mat correctColorCluster(Mat in);
   Vec3b findPredominantColor(int u, int v, Mat in, int desvio);
+  std::string escreve_linha_imagem(float foco, std::string nome, Eigen::MatrixXf C, Eigen::Quaternion<float> q);
   /// Variaveis
   Eigen::Matrix3f K_cam; // Parametros intrinsecos da camera
   int cam_w, cam_h;      // Dimensoes da camera
   std::string pasta;     // Nome da pasta a salvar as coisas
+
 };
 
 #endif // PROCESSCLOUD_H

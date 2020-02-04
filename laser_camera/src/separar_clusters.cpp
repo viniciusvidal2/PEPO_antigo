@@ -78,16 +78,16 @@ int main(int argc, char **argv)
 //    loadPLYFile<PointTN>(std::string(home)+"/Desktop/Dados_B9/nuvem_filtrada_covariancia.ply", *filtrada);
 
     // Extrai um vetor de planos e retorna nuvem sem eles
-//    ROS_INFO("Obtendo planos na nuvem ...");
-//    cl.obtainPlanes(filtrada, vetor_planos, filtrada_sem_planos);
-//    cl.separateClustersByDistance(vetor_planos);
-//    ROS_INFO("Foram obtidos %zu planos.", vetor_planos.size());
+    ROS_INFO("Obtendo planos na nuvem ...");
+    cl.obtainPlanes(filtrada, vetor_planos, filtrada_sem_planos);
+    cl.separateClustersByDistance(vetor_planos);
+    ROS_INFO("Foram obtidos %zu planos.", vetor_planos.size());
 
     // Extrai clusters da nuvem de pontos que restou
     *filtrada_sem_planos = *filtrada;
     ROS_INFO("Obtendo clusters para o restante da nuvem ...");
     cl.extractClustersRegionGrowingRGB(filtrada_sem_planos, vetor_clusters);
-//    cl.separateClustersByDistance(vetor_clusters);
+    cl.separateClustersByDistance(vetor_clusters);
     ROS_INFO("Foram obtidos %zu clusters.", vetor_clusters.size());
 
     // Definindo paleta de cores de cada plano e cluster
@@ -114,6 +114,12 @@ int main(int argc, char **argv)
         *final += vetor_planos[i];
     for(size_t i=0; i < vetor_clusters.size(); i++)
         *final += vetor_clusters[i];
+
+    // Salva cada nuvem de clusters na pasta certa
+    for(size_t i=0; i < vetor_planos.size(); i++)
+        savePLYFileASCII<PointTN>(std::string(home)+"/Desktop/Dados_B9/Clusters/p_"+std::to_string(i+1)+".ply", vetor_planos[i]);
+    for(size_t i=0; i < vetor_clusters.size(); i++)
+        savePLYFileASCII<PointTN>(std::string(home)+"/Desktop/Dados_B9/Clusters/o_"+std::to_string(i+1)+".ply", vetor_clusters[i]);
 
     // Salva nuvem final
     ROS_INFO("Salvando nuvem final ...");

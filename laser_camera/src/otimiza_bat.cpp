@@ -233,7 +233,8 @@ int main(int argc, char **argv)
     // fx - fy - tx - ty
     ROS_INFO("Comecando o metodo de otimizacao por BATS ...");
     Eigen::VectorXf opt(4);
-    opt = bat(fx, fy, tx, ty, nuvem_clusters, edges_rgb);
+//    opt = bat(fx, fy, tx, ty, nuvem_clusters, edges_rgb);
+    opt << fx, fy, tx, ty;
 
     ////////////////////////////////////////////
 
@@ -245,8 +246,13 @@ int main(int argc, char **argv)
 
     cout << "\nParametros Otimizados na ordem como estao:\n\n" << opt << endl << endl;
 
+    // Salvar arquivo NVM para o MART
+    ROS_INFO("Salvando arquivo NVM ...");
+    std::string nvm = std::string(home)+"/Desktop/Dados_B9/camera.nvm";
+    pc->writeNVM(nvm, std::string(home)+"/Desktop/Dados_B9/"+im_rgb, opt);
+
     // Salvando a nuvem final para dar uma ideia
-    ROS_INFO("Salvando e finalizando ...");
+    ROS_INFO("Salvando nuvem colorida e finalizando ...");
     savePLYFileASCII<PointTN>(std::string(home)+"/Desktop/Dados_B9/nuvem_colorida_calibrada.ply", *nuvem_calibrada);
 
     ros::spinOnce();
