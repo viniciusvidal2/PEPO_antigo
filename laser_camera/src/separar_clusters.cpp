@@ -61,21 +61,29 @@ int main(int argc, char **argv)
     home = getenv("HOME");
     loadPLYFile<PointTN>(std::string(home)+"/Desktop/Dados_B9/nuvem_final.ply", *inicial);
 
-    // Filtra por outliers
-    ROS_INFO("Filtrando por outliers ...");
-    StatisticalOutlierRemoval<PointTN> sor;
-    sor.setInputCloud(inicial);
-    sor.setMeanK(10);
-    sor.setStddevMulThresh(2.5);
-    sor.setNegative(false);
-    sor.filter(*filtrada);
+//    // Filtra por outliers
+//    ROS_INFO("Filtrando por outliers ...");
+//    StatisticalOutlierRemoval<PointTN> sor;
+//    sor.setInputCloud(inicial);
+//    sor.setMeanK(10);
+//    sor.setStddevMulThresh(2.5);
+//    sor.setNegative(false);
+//    sor.filter(*filtrada);
 
-    ROS_INFO("Filtrando ruidos radiais ...");
-    pc.filterCloudDepthCovariance(filtrada, 50, 1.5);
+//    ROS_INFO("Filtrando ruidos radiais ...");
+//    pc.filterCloudDepthCovariance(filtrada, 50, 1.5);
 
-    ROS_INFO("Salvando a nuvem filtrada por covariancia ...");
-    savePLYFileASCII<PointTN>(std::string(home)+"/Desktop/Dados_B9/nuvem_filtrada_covariancia.ply", *filtrada);
-//    loadPLYFile<PointTN>(std::string(home)+"/Desktop/Dados_B9/nuvem_filtrada_covariancia.ply", *filtrada);
+//    ROS_INFO("Salvando a nuvem filtrada por covariancia ...");
+//    savePLYFileASCII<PointTN>(std::string(home)+"/Desktop/Dados_B9/nuvem_filtrada_covariancia.ply", *filtrada);
+    loadPLYFile<PointTN>(std::string(home)+"/Desktop/Dados_B9/nuvem_filtrada_covariancia.ply", *filtrada);
+
+    // Projeta sobre imagem com parametros default para ajudar a separar clusters por cor
+    ROS_INFO("Adicionando cor com parametros default ...");
+    float fx = 1496.701399, fy = 1475.059238, tx = 2, ty = 9;
+    Mat imagem = imread(std::string(home)+"/Desktop/Dados_B9/camera_rgb.png");
+    PointCloud<PointTN>::Ptr temp_cor (new PointCloud<PointTN>);
+    pc.colorCloudWithCalibratedImage(filtrada, temp_cor, imagem, fx, fy, tx, ty);
+    *filtrada = *temp_cor;
 
     // Extrai um vetor de planos e retorna nuvem sem eles
     ROS_INFO("Obtendo planos na nuvem ...");
@@ -83,11 +91,44 @@ int main(int argc, char **argv)
     cl.separateClustersByDistance(vetor_planos);
     ROS_INFO("Foram obtidos %zu planos.", vetor_planos.size());
 
+    //////////// Aplicando polinomios sobre os planos ////////////
+    omp_set_dynamic(0);
+//    #pragma omp parallel for num_threads(vetor_planos.size())
+    for(int i = 0; i < vetor_planos.size(); i++){
+        // Nuvem atual
+        PointCloud<PointTN>::Ptr plane (new PointCloud<PointTN>());
+        *plane = vetor_planos[i];
+        pcl::search::KdTree<PointT>::Ptr tree_xyzrgb (new pcl::search::KdTree<PointT>());
+        // Separando nuvem em nuvem de pontos XYZ, nuvem XYZRGB e so as normais
+        PointCloud<PointT>::Ptr cloudxyzrgb (new PointCloud<PointT>());
+        cloudxyzrgb->resize(plane->size());
+        ROS_INFO("Separando nuvem %d para processar ....", i+1);
+        #pragma omp parallel for
+        for(size_t i=0; i < plane->size(); i++){
+            PointT t;
+            t.x = plane->points[i].x; t.y = plane->points[i].y; t.z = plane->points[i].z;
+            t.r = plane->points[i].r; t.g = plane->points[i].g; t.b = plane->points[i].b;
+            cloudxyzrgb->points[i] = t;
+        }
+        // Passar filtro polinomial
+        ROS_INFO("Aplicando filtro polinomial no plano %d ...", i+1);
+        PointCloud<PointTN>::Ptr saida_poli (new PointCloud<PointTN>());
+        MovingLeastSquares<PointT, PointTN> mls;
+        mls.setComputeNormals(true);
+        mls.setInputCloud(cloudxyzrgb);
+        mls.setPolynomialOrder(5);
+        mls.setSearchMethod(tree_xyzrgb);
+        mls.setSearchRadius(0.1);
+        mls.process(*saida_poli);
+        pc.calculateNormals(saida_poli);
+        vetor_planos[i] = *saida_poli;
+        ROS_INFO("Plano %d filtrado.", i+1);
+    }
+
     // Extrai clusters da nuvem de pontos que restou
-    *filtrada_sem_planos = *filtrada;
     ROS_INFO("Obtendo clusters para o restante da nuvem ...");
     cl.extractClustersRegionGrowingRGB(filtrada_sem_planos, vetor_clusters);
-    cl.separateClustersByDistance(vetor_clusters);
+//    cl.separateClustersByDistance(vetor_clusters);
     ROS_INFO("Foram obtidos %zu clusters.", vetor_clusters.size());
 
     // Definindo paleta de cores de cada plano e cluster

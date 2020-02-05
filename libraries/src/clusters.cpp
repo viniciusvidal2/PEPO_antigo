@@ -20,8 +20,8 @@ void Clusters::obtainPlanes(PointCloud<PointTN>::Ptr in, vector<PointCloud<Point
     seg.setOptimizeCoefficients(true);
     seg.setModelType(SACMODEL_PLANE);
     seg.setMethodType(SAC_RANSAC);
-    seg.setMaxIterations(250);
-    seg.setDistanceThreshold (0.03);
+    seg.setMaxIterations(150);
+    seg.setDistanceThreshold(0.06);
     // Processar planos ate cansar
     PointCloud<PointTN>::Ptr temp (new PointCloud<PointTN>), plane (new PointCloud<PointTN>), cloud_f (new PointCloud<PointTN>);
     *temp = *in;
@@ -48,6 +48,7 @@ void Clusters::obtainPlanes(PointCloud<PointTN>::Ptr in, vector<PointCloud<Point
         // Adiciona ao vetor o plano obtido
         planos.push_back(*plane);
         contador_iteracoes++;
+        ROS_INFO("Rolou a iteracao %d.", contador_iteracoes);
     }
     // Passar o que sobrou sem planos para a funcao principal
     *out = *temp;
@@ -65,6 +66,7 @@ void Clusters::extractClustersRegionGrowing(PointCloud<PointTN>::Ptr in, vector<
     normal_estimator.compute(*normals);
     // Forcar virar as normais na marra para a origem
     Eigen::Vector3f C = Eigen::Vector3f::Zero();
+    #pragma omp parallel for
     for(size_t i=0; i < normals->size(); i++){
         Eigen::Vector3f normal, cp;
         normal << normals->points[i].normal_x, normals->points[i].normal_y, normals->points[i].normal_z;
@@ -76,19 +78,21 @@ void Clusters::extractClustersRegionGrowing(PointCloud<PointTN>::Ptr in, vector<
             normals->points[i].normal_z = -normals->points[i].normal_z;
         }
     }
+    cout << "porraaaaa " << endl;
     // Iniciando o objeto de calculo da regiao e inserindo parametros
     RegionGrowing<PointTN, Normal> reg;
     reg.setSearchMethod(tree);
-    reg.setMinClusterSize(50);
+    reg.setMinClusterSize(in->size()/10);
     reg.setMaxClusterSize(10000000);
-    reg.setNumberOfNeighbours(50);
+    reg.setNumberOfNeighbours(15);
     reg.setInputCloud(in);
     reg.setInputNormals(normals);
-    reg.setCurvatureThreshold(6.0);
-    reg.setSmoothnessThreshold(20.0 / 180.0 * M_PI);
+    reg.setCurvatureThreshold(5);
+    reg.setSmoothnessThreshold(15.0 / 180.0 * M_PI);
     // Inicia vetor de clusters - pelo indice na nuvem
     vector<PointIndices> clusters_ind;
     reg.extract(clusters_ind);
+    cout << "porraaaaa " << endl;
     // Passa para o vetor de nuvens da rotina principal
     clust.resize(clusters_ind.size());
     #pragma omp parallel for
@@ -100,7 +104,6 @@ void Clusters::extractClustersRegionGrowing(PointCloud<PointTN>::Ptr in, vector<
         extract.setNegative(false);
         extract.setIndices(temp);
         extract.filter(clust[i]);
-        temp->indices.clear();
     }
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -116,6 +119,7 @@ void Clusters::extractClustersRegionGrowingRGB(PointCloud<PointTN>::Ptr in, vect
     normal_estimator.compute(*normals);
     // Forcar virar as normais na marra para a origem
     Eigen::Vector3f C = Eigen::Vector3f::Zero();
+    #pragma omp parallel for
     for(size_t i=0; i < normals->size(); i++){
         Eigen::Vector3f normal, cp;
         normal << normals->points[i].normal_x, normals->points[i].normal_y, normals->points[i].normal_z;
@@ -130,15 +134,15 @@ void Clusters::extractClustersRegionGrowingRGB(PointCloud<PointTN>::Ptr in, vect
     // Iniciando o objeto de calculo da regiao e inserindo parametros
     RegionGrowingRGB<PointTN, Normal> reg;
     reg.setSearchMethod(tree);
-    reg.setMinClusterSize(50);
+    reg.setMinClusterSize(5);
     reg.setMaxClusterSize(10000000);
-    reg.setNumberOfNeighbours(50);
+    reg.setNumberOfNeighbours(30);
     reg.setInputCloud(in);
     reg.setInputNormals(normals);
-    reg.setCurvatureThreshold(1.0);
+    reg.setCurvatureThreshold(0.5);
     reg.setSmoothnessThreshold(5.0 / 180.0 * M_PI);
-    reg.setPointColorThreshold(5);
-    reg.setRegionColorThreshold(5);
+    reg.setPointColorThreshold(30);
+    reg.setRegionColorThreshold(50);
     reg.setDistanceThreshold(0.04);
     // Inicia vetor de clusters - pelo indice na nuvem
     vector<PointIndices> clusters_ind;
@@ -154,7 +158,6 @@ void Clusters::extractClustersRegionGrowingRGB(PointCloud<PointTN>::Ptr in, vect
         extract.setNegative(false);
         extract.setIndices(temp);
         extract.filter(clust[i]);
-        temp->indices.clear();
     }
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -164,7 +167,7 @@ void Clusters::extractClustersEuclidian(PointCloud<PointTN>::Ptr in, vector<Poin
     EuclideanClusterExtraction<PointTN> eucl;
     eucl.setInputCloud(in);
     eucl.setMaxClusterSize(int(in->size()*10));
-    eucl.setMinClusterSize(50);
+    eucl.setMinClusterSize(int(in->size()/10));
     eucl.setClusterTolerance(0.05);
     eucl.setSearchMethod(tree);
     // Inicia vetor de clusters - pelo indice na nuvem
@@ -192,7 +195,7 @@ void Clusters::separateClustersByDistance(vector<PointCloud<PointTN> > &clust){
     for(size_t i=0; i<clust.size(); i++){
         // Passa para a funcao de euclidean cluster a nuvem corespondente
         *tempc = clust[i];
-        this->extractClustersEuclidian(tempc, tempv);
+        this->extractClustersRegionGrowingRGB(tempc, tempv);
         ROS_INFO("O cluster %zu virou %zu clusters.", i+1, tempv.size());
         // Adiciona ao novo vetor local os resultados
         local.insert(local.end(), tempv.begin(), tempv.end());
