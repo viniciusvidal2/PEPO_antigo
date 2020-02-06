@@ -61,7 +61,7 @@ int main(int argc, char **argv)
     home = getenv("HOME");
     loadPLYFile<PointTN>(std::string(home)+"/Desktop/Dados_B9/nuvem_final.ply", *inicial);
 
-//    // Filtra por outliers
+    // Filtra por outliers
 //    ROS_INFO("Filtrando por outliers ...");
 //    StatisticalOutlierRemoval<PointTN> sor;
 //    sor.setInputCloud(inicial);
@@ -91,39 +91,43 @@ int main(int argc, char **argv)
     cl.separateClustersByDistance(vetor_planos);
     ROS_INFO("Foram obtidos %zu planos.", vetor_planos.size());
 
+    // Aplicando polinomios sobre os planos
+    ROS_INFO("Filtrando por polinomio os planos ...");
+    pc.applyPolinomialFilter(vetor_planos);
+
     //////////// Aplicando polinomios sobre os planos ////////////
-    omp_set_dynamic(0);
+//    omp_set_dynamic(0);
 //    #pragma omp parallel for num_threads(vetor_planos.size())
-    for(int i = 0; i < vetor_planos.size(); i++){
-        // Nuvem atual
-        PointCloud<PointTN>::Ptr plane (new PointCloud<PointTN>());
-        *plane = vetor_planos[i];
-        pcl::search::KdTree<PointT>::Ptr tree_xyzrgb (new pcl::search::KdTree<PointT>());
-        // Separando nuvem em nuvem de pontos XYZ, nuvem XYZRGB e so as normais
-        PointCloud<PointT>::Ptr cloudxyzrgb (new PointCloud<PointT>());
-        cloudxyzrgb->resize(plane->size());
-        ROS_INFO("Separando nuvem %d para processar ....", i+1);
-        #pragma omp parallel for
-        for(size_t i=0; i < plane->size(); i++){
-            PointT t;
-            t.x = plane->points[i].x; t.y = plane->points[i].y; t.z = plane->points[i].z;
-            t.r = plane->points[i].r; t.g = plane->points[i].g; t.b = plane->points[i].b;
-            cloudxyzrgb->points[i] = t;
-        }
-        // Passar filtro polinomial
-        ROS_INFO("Aplicando filtro polinomial no plano %d ...", i+1);
-        PointCloud<PointTN>::Ptr saida_poli (new PointCloud<PointTN>());
-        MovingLeastSquares<PointT, PointTN> mls;
-        mls.setComputeNormals(true);
-        mls.setInputCloud(cloudxyzrgb);
-        mls.setPolynomialOrder(5);
-        mls.setSearchMethod(tree_xyzrgb);
-        mls.setSearchRadius(0.1);
-        mls.process(*saida_poli);
-        pc.calculateNormals(saida_poli);
-        vetor_planos[i] = *saida_poli;
-        ROS_INFO("Plano %d filtrado.", i+1);
-    }
+//    for(int i = 0; i < vetor_planos.size(); i++){
+//        // Nuvem atual
+//        PointCloud<PointTN>::Ptr plane (new PointCloud<PointTN>());
+//        *plane = vetor_planos[i];
+//        pcl::search::KdTree<PointT>::Ptr tree_xyzrgb (new pcl::search::KdTree<PointT>());
+//        // Separando nuvem em nuvem de pontos XYZ, nuvem XYZRGB e so as normais
+//        PointCloud<PointT>::Ptr cloudxyzrgb (new PointCloud<PointT>());
+//        cloudxyzrgb->resize(plane->size());
+//        ROS_INFO("Separando nuvem %d para processar ....", i+1);
+//        #pragma omp parallel for
+//        for(size_t i=0; i < plane->size(); i++){
+//            PointT t;
+//            t.x = plane->points[i].x; t.y = plane->points[i].y; t.z = plane->points[i].z;
+//            t.r = plane->points[i].r; t.g = plane->points[i].g; t.b = plane->points[i].b;
+//            cloudxyzrgb->points[i] = t;
+//        }
+//        // Passar filtro polinomial
+//        ROS_INFO("Aplicando filtro polinomial no plano %d ...", i+1);
+//        PointCloud<PointTN>::Ptr saida_poli (new PointCloud<PointTN>());
+//        MovingLeastSquares<PointT, PointTN> mls;
+//        mls.setComputeNormals(true);
+//        mls.setInputCloud(cloudxyzrgb);
+//        mls.setPolynomialOrder(2);
+//        mls.setSearchMethod(tree_xyzrgb);
+//        mls.setSearchRadius(0.1);
+//        mls.process(*saida_poli);
+//        pc.calculateNormals(saida_poli);
+//        vetor_planos[i] = *saida_poli;
+//        ROS_INFO("Plano %d filtrado.", i+1);
+//    }
 
     // Extrai clusters da nuvem de pontos que restou
     ROS_INFO("Obtendo clusters para o restante da nuvem ...");

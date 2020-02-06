@@ -60,6 +60,7 @@ public:
     void colorCloud(PointCloud<PointTN>::Ptr cloud, size_t i);
 
 private:
+    void adjustSmallClusters(vector<PointCloud<PointTN>> &clusters);
     vector<int> pal_r, pal_g, pal_b;
 };
 
