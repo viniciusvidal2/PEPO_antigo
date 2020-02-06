@@ -101,11 +101,11 @@ void laserCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
         ROS_WARN("Filtrando nuvem ...");
         PointCloud<PointT>::Ptr cloud_filter (new PointCloud<PointT>());
         VoxelGrid<PointT> voxel;
-        voxel.setInputCloud(cloud_filter);
-        voxel.setLeafSize(0.02, 0.02, 0.02);
+        voxel.setInputCloud(cloud_color_image);
+        voxel.setLeafSize(0.01, 0.01, 0.01);
         voxel.filter(*cloud_filter);
         StatisticalOutlierRemoval<PointT> sor;
-        sor.setInputCloud(cloud_color_image);
+        sor.setInputCloud(cloud_filter);
         sor.setMeanK(50);
         sor.setStddevMulThresh(1);
         sor.filter(*cloud_filter);

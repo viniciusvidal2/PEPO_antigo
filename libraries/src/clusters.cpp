@@ -48,7 +48,7 @@ void Clusters::obtainPlanes(PointCloud<PointTN>::Ptr in, vector<PointCloud<Point
         // Adiciona ao vetor o plano obtido
         planos.push_back(*plane);
         contador_iteracoes++;
-        ROS_INFO("Rolou a iteracao %d.", contador_iteracoes);
+        ROS_INFO("Passou a iteracao %d na busca por planos ...", contador_iteracoes);
     }
     // Passar o que sobrou sem planos para a funcao principal
     *out = *temp;
@@ -200,8 +200,8 @@ void Clusters::separateClustersByDistance(vector<PointCloud<PointTN> > &clust){
         // Adiciona ao novo vetor local os resultados
         local.insert(local.end(), tempv.begin(), tempv.end());
     }
-    // Ver se clusters pequenos o suficiente podem ser adicionados a outros maiores
-    this->adjustSmallClusters(local);
+//    // Ver se clusters pequenos o suficiente podem ser adicionados a outros maiores
+//    this->adjustSmallClusters(local);
     // Forca o vetor global ser igual ao vetor local que foi separado
     clust.clear(); clust = local;
 }
@@ -228,25 +228,74 @@ void Clusters::colorCloud(PointCloud<PointTN>::Ptr cloud, size_t i){
     }
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
-void Clusters::adjustSmallClusters(vector<PointCloud<PointTN>> &clusters){
+//void Clusters::adjustSmallClusters(vector<PointCloud<PointTN>> &clusters){
+//    // Variaveis
+//    vector<int> grande_ou_pequeno(clusters.size()); // 1 para grande, 0 para pequeno
+//    float thresh = 0.1; // Limite entre o total da nuvem e o tamanho do clusters para ser grande
+//    vector<Eigen::Vector4f> centroides(clusters.size());
+//    size_t tamanho_total = 0;
+//    // Calcular o centroide de cada cluster e somar o tamanho total da nuvem que deu origem
+//    for (int i=0; i<grande_ou_pequeno.size(); i++) {
+//        compute3DCentroid(clusters[i], centroides[i]);
+//        tamanho_total += clusters[i].size();
+//    }
+//    // Segundo porcentagem, alterar e marcar como pequeno
+//#pragma omp parallel for
+//    for (int i=0; i < grande_ou_pequeno.size(); i++) {
+//        if( float(clusters[i].size())/float(tamanho_total) > thresh )
+//            grande_ou_pequeno[i] = 1;
+//    }
+//    // Calcular distancia do cluster mais proximo que nao e pequeno e adicionar
+//    for (int i=0; i < grande_ou_pequeno.size(); i++) {
+//        int indice_escolhido;
+//        float dist_min = 1000000;
+//        // Se for cluster pequeno
+//        if(grande_ou_pequeno[i] == 0){
+//            // Varre o vetor de novo
+//            for(int j=0; j < grande_ou_pequeno.size(); j++){
+//                // Se for cluster grande, calcula distancia
+//                if(grande_ou_pequeno[j] == 1){
+//                    float dist = sqrt( pow(centroides[i](0) - centroides[j](0), 2) +
+//                                       pow(centroides[i](1) - centroides[j](1), 2) +
+//                                       pow(centroides[i](2) - centroides[j](2), 2) );
+//                    if(dist < dist_min){
+//                        dist_min = dist;
+//                        indice_escolhido = j;
+//                    }
+//                }
+//            }
+//            // Adicionar no indice j encontrado como indice_escolhido
+//            clusters[indice_escolhido] += clusters[i];
+//        }
+//    }
+//    // Salva todos os clusters grandes no vetor de saida e substitui o vetor de entrada
+//    vector<PointCloud<PointTN>> temp;
+//    for(int i=0; i<grande_ou_pequeno.size(); i++){
+//        if(grande_ou_pequeno[i] == 1)
+//            temp.push_back(clusters[i]);
+//    }
+
+//    clusters.clear(); clusters = temp;
+//}
+/////////////////////////////////////////////////////////////////////////////////////////////////
+void Clusters::killSmallClusters(vector<PointCloud<PointTN>> &clusters, float pct_over_mean){
     // Variaveis
-    vector<int> grande_ou_pequeno(clusters.size()); // 1 para grande, 0 para pequeno
-    float thresh = 0.1; // Limite entre o total da nuvem e o tamanho do clusters para ser grande
     vector<Eigen::Vector4f> centroides(clusters.size());
-    size_t tamanho_total = 0;
-    // Calcular o centroide de cada cluster e somar o tamanho total da nuvem que deu origem
-    for (int i=0; i<grande_ou_pequeno.size(); i++) {
+    float media, soma = 0;
+    vector<int> grande_ou_pequeno(clusters.size()); // 1 para grande, 0 para pequeno
+    // Tira media e desvio padrao do tamanho dos clusters, calcula centroide tambem
+    for (int i=0; i<clusters.size(); i++) {
         compute3DCentroid(clusters[i], centroides[i]);
-        tamanho_total += clusters[i].size();
+        soma += float(clusters[i].size());
     }
-    // Segundo porcentagem, alterar e marcar como pequeno
-#pragma omp parallel for
-    for (int i=0; i < grande_ou_pequeno.size(); i++) {
-        if(clusters[i].size()/tamanho_total > thresh)
+    media = soma/float(clusters.size());
+    // Se estiver menor que media menos tantos desvios marca
+    #pragma omp parallel for
+    for(int i=0; i < clusters.size(); i++){
+        if(clusters[i].size() > media*pct_over_mean)
             grande_ou_pequeno[i] = 1;
     }
     // Calcular distancia do cluster mais proximo que nao e pequeno e adicionar
-#pragma omp parallel for
     for (int i=0; i < grande_ou_pequeno.size(); i++) {
         int indice_escolhido;
         float dist_min = 1000000;

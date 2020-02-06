@@ -49,9 +49,10 @@ int main(int argc, char **argv)
     PointCloud<PointTN>::Ptr inicial             (new PointCloud<PointTN>);
     PointCloud<PointTN>::Ptr filtrada            (new PointCloud<PointTN>);
     PointCloud<PointTN>::Ptr filtrada_sem_planos (new PointCloud<PointTN>);
-    PointCloud<PointTN>::Ptr final               (new PointCloud<PointTN>);
-    vector<PointCloud<PointTN>> vetor_planos;
-    vector<PointCloud<PointTN>> vetor_clusters;
+    PointCloud<PointTN>::Ptr final               (new PointCloud<PointTN>);    
+    PointCloud<PointTN>::Ptr projetar            (new PointCloud<PointTN>);
+    vector<PointCloud<PointTN>> vetor_planos  , vetor_planos_filt  ;
+    vector<PointCloud<PointTN>> vetor_clusters, vetor_clusters_filt;
     Clusters cl;
     ProcessCloud pc;
 
@@ -89,92 +90,83 @@ int main(int argc, char **argv)
     ROS_INFO("Obtendo planos na nuvem ...");
     cl.obtainPlanes(filtrada, vetor_planos, filtrada_sem_planos);
     cl.separateClustersByDistance(vetor_planos);
-    ROS_INFO("Foram obtidos %zu planos.", vetor_planos.size());
+    cl.killSmallClusters(vetor_planos, 1);
+    ROS_INFO("Foram obtidos %d planos apos filtragem.", vetor_planos.size());
+    vetor_planos_filt = vetor_planos;
 
     // Aplicando polinomios sobre os planos
     ROS_INFO("Filtrando por polinomio os planos ...");
-    pc.applyPolinomialFilter(vetor_planos);
-
-    //////////// Aplicando polinomios sobre os planos ////////////
-//    omp_set_dynamic(0);
-//    #pragma omp parallel for num_threads(vetor_planos.size())
-//    for(int i = 0; i < vetor_planos.size(); i++){
-//        // Nuvem atual
-//        PointCloud<PointTN>::Ptr plane (new PointCloud<PointTN>());
-//        *plane = vetor_planos[i];
-//        pcl::search::KdTree<PointT>::Ptr tree_xyzrgb (new pcl::search::KdTree<PointT>());
-//        // Separando nuvem em nuvem de pontos XYZ, nuvem XYZRGB e so as normais
-//        PointCloud<PointT>::Ptr cloudxyzrgb (new PointCloud<PointT>());
-//        cloudxyzrgb->resize(plane->size());
-//        ROS_INFO("Separando nuvem %d para processar ....", i+1);
-//        #pragma omp parallel for
-//        for(size_t i=0; i < plane->size(); i++){
-//            PointT t;
-//            t.x = plane->points[i].x; t.y = plane->points[i].y; t.z = plane->points[i].z;
-//            t.r = plane->points[i].r; t.g = plane->points[i].g; t.b = plane->points[i].b;
-//            cloudxyzrgb->points[i] = t;
-//        }
-//        // Passar filtro polinomial
-//        ROS_INFO("Aplicando filtro polinomial no plano %d ...", i+1);
-//        PointCloud<PointTN>::Ptr saida_poli (new PointCloud<PointTN>());
-//        MovingLeastSquares<PointT, PointTN> mls;
-//        mls.setComputeNormals(true);
-//        mls.setInputCloud(cloudxyzrgb);
-//        mls.setPolynomialOrder(2);
-//        mls.setSearchMethod(tree_xyzrgb);
-//        mls.setSearchRadius(0.1);
-//        mls.process(*saida_poli);
-//        pc.calculateNormals(saida_poli);
-//        vetor_planos[i] = *saida_poli;
-//        ROS_INFO("Plano %d filtrado.", i+1);
-//    }
+    pc.applyPolinomialFilter(vetor_planos_filt, 3, 0.1);
 
     // Extrai clusters da nuvem de pontos que restou
     ROS_INFO("Obtendo clusters para o restante da nuvem ...");
     cl.extractClustersRegionGrowingRGB(filtrada_sem_planos, vetor_clusters);
-//    cl.separateClustersByDistance(vetor_clusters);
-    ROS_INFO("Foram obtidos %zu clusters.", vetor_clusters.size());
+    cl.separateClustersByDistance(vetor_clusters);
+    cl.killSmallClusters(vetor_clusters, 1);
+    ROS_INFO("Foram obtidos %d clusters apos filtragem.", vetor_clusters.size());
+    vetor_clusters_filt = vetor_clusters;
+
+    // Aplicando polinomio sobre clusters
+    ROS_INFO("Filtrando por polinomio os clusters ...");
+    pc.applyPolinomialFilter(vetor_clusters_filt, 5, 0.05);
 
     // Definindo paleta de cores de cada plano e cluster
     cl.setColorPallete(vetor_planos.size() + vetor_clusters.size());
 
     // Colore nuvem de pontos cada qual com sua cor selecionada da paleta
-    PointCloud<PointTN>::Ptr temp (new PointCloud<PointTN>);
     ROS_INFO("Colorindo planos ...");
+    omp_set_dynamic(0);
+    #pragma omp parallel for num_threads(vetor_planos.size())
     for(size_t i=0; i < vetor_planos.size(); i++){
+        PointCloud<PointTN>::Ptr temp (new PointCloud<PointTN>);
         *temp = vetor_planos[i];
         cl.colorCloud(temp, i);
         vetor_planos[i] = *temp;
+        temp->clear();
+        *temp = vetor_planos_filt[i];
+        cl.colorCloud(temp, i);
+        vetor_planos_filt[i] = *temp;
     }
     ROS_INFO("Colorindo clusters ...");
+    omp_set_dynamic(0);
+    #pragma omp parallel for num_threads(vetor_planos.size())
     for(size_t i=0; i < vetor_clusters.size(); i++){
+        PointCloud<PointTN>::Ptr temp (new PointCloud<PointTN>);
         *temp = vetor_clusters[i];
         cl.colorCloud(temp, vetor_planos.size()+i);
         vetor_clusters[i] = *temp;
+        temp->clear();
+        *temp = vetor_clusters_filt[i];
+        cl.colorCloud(temp, vetor_planos.size()+i);
+        vetor_clusters_filt[i] = *temp;
     }
 
     // Acumula nuvem final
     ROS_INFO("Acumulando clusters apos processo ...");
-    for(size_t i=0; i < vetor_planos.size(); i++)
-        *final += vetor_planos[i];
-    for(size_t i=0; i < vetor_clusters.size(); i++)
-        *final += vetor_clusters[i];
+    for(size_t i=0; i < vetor_planos.size(); i++){
+        *final += vetor_planos_filt[i];
+        *projetar += vetor_planos[i];
+    }
+    for(size_t i=0; i < vetor_clusters.size(); i++){
+        *final += vetor_clusters_filt[i];
+        *projetar += vetor_clusters[i];
+    }
 
     // Salva cada nuvem de clusters na pasta certa
-    for(size_t i=0; i < vetor_planos.size(); i++)
-        savePLYFileASCII<PointTN>(std::string(home)+"/Desktop/Dados_B9/Clusters/p_"+std::to_string(i+1)+".ply", vetor_planos[i]);
-    for(size_t i=0; i < vetor_clusters.size(); i++)
-        savePLYFileASCII<PointTN>(std::string(home)+"/Desktop/Dados_B9/Clusters/o_"+std::to_string(i+1)+".ply", vetor_clusters[i]);
+    for(size_t i=0; i < vetor_planos_filt.size()  ; i++)
+        savePLYFileASCII<PointTN>(std::string(home)+"/Desktop/Dados_B9/Clusters/p_"+std::to_string(i+1)+".ply", vetor_planos_filt[i]);
+    for(size_t i=0; i < vetor_clusters_filt.size(); i++)
+        savePLYFileASCII<PointTN>(std::string(home)+"/Desktop/Dados_B9/Clusters/o_"+std::to_string(i+1)+".ply", vetor_clusters_filt[i]);
 
     // Salva nuvem final
     ROS_INFO("Salvando nuvem final ...");
-    savePLYFileASCII<PointTN>(std::string(home)+"/Desktop/Dados_B9/nuvem_clusters.ply", *final);
-
-//    loadPLYFile<PointTN>(std::string(home)+"/Desktop/Dados_B9/nuvem_clusters.ply", *final);
+    savePLYFileASCII<PointTN>(std::string(home)+"/Desktop/Dados_B9/nuvem_clusters_filtrada.ply", *final   );
+    savePLYFileASCII<PointTN>(std::string(home)+"/Desktop/Dados_B9/nuvem_clusters.ply"         , *projetar);
+//    loadPLYFile<PointTN>(std::string(home)+"/Desktop/Dados_B9/nuvem_clusters.ply", *projetar);
 
     // Projeta na imagem virtual a nuvem inteira
     ROS_INFO("Projetando imagem da camera virtual ...");
-    pc.createVirtualLaserImage(final, "imagem_clusters");
+    pc.createVirtualLaserImage(projetar, "imagem_clusters");
 
     ROS_INFO("Processo finalizado.");
 

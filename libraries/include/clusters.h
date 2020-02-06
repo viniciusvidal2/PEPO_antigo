@@ -58,9 +58,10 @@ public:
     void separateClustersByDistance(vector<PointCloud<PointTN>> &clust);
     void setColorPallete(size_t l);
     void colorCloud(PointCloud<PointTN>::Ptr cloud, size_t i);
+//    void adjustSmallClusters(vector<PointCloud<PointTN>> &clusters);
+    void killSmallClusters(vector<PointCloud<PointTN>> &clusters, float pct_over_mean);
 
-private:
-    void adjustSmallClusters(vector<PointCloud<PointTN>> &clusters);
+private:    
     vector<int> pal_r, pal_g, pal_b;
 };
 
