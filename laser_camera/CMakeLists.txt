@@ -55,3 +55,8 @@ add_executable(otimiza_bat src/otimiza_bat.cpp ../libraries/src/processcloud.cpp
 target_compile_options(otimiza_bat PRIVATE ${OpenMP_FLAGS})
 add_dependencies(otimiza_bat ${catkin_EXPORTED_TARGETS})
 target_link_libraries(otimiza_bat ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS} ${OpenMP_LIBS})
+
+add_executable(scanner_aquisicao src/scanner_aquisicao.cpp ../libraries/src/processcloud.cpp)
+target_compile_options(scanner_aquisicao PRIVATE ${OpenMP_FLAGS})
+add_dependencies(scanner_aquisicao ${catkin_EXPORTED_TARGETS})
+target_link_libraries(scanner_aquisicao ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS} ${OpenMP_LIBS})

@@ -497,3 +497,13 @@ void ProcessCloud::applyPolinomialFilter(vector<PointCloud<PointTN>> &vetor_nuve
     }
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
+void ProcessCloud::transformCloudServoAngles(PointCloud<PointT>::Ptr cloud, double pan, double tilt){
+    // Cria matriz de rotacao de acordo com angulos de pan e tilt
+    // Angulos chegam em DEGREES - passar para RAD aqui
+    // Pan - Yaw em torno de Y; Tilt - pitch em torno de X
+    Eigen::Matrix4f T = Eigen::Matrix4f::Identity();
+    Eigen::Matrix3f rot = this->euler2matrix(0, DEG2RAD(tilt), DEG2RAD(pan));
+    T.block<3,3>(0, 0) = rot;
+    // Transforma a nuvem com a matriz de rotacao
+    transformPointCloud(*cloud, *cloud, T);
+}
