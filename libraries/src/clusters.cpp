@@ -27,7 +27,7 @@ void Clusters::obtainPlanes(PointCloud<PointTN>::Ptr in, vector<PointCloud<Point
     *temp = *in;
     int nr_points = (int) temp->points.size();
     int contador_iteracoes = 0;
-    while(temp->size() > 0.6*nr_points && contador_iteracoes < 30){ // Ainda podem haver planos significativos
+    while(temp->size() > 0.2*nr_points && contador_iteracoes < 30){ // Ainda podem haver planos significativos
         seg.setInputCloud(temp);
         seg.segment(*inliers, *coefficients);
         if (inliers->indices.size() == 0){
@@ -196,7 +196,7 @@ void Clusters::separateClustersByDistance(vector<PointCloud<PointTN> > &clust){
         // Passa para a funcao de euclidean cluster a nuvem corespondente
         *tempc = clust[i];
         this->extractClustersRegionGrowingRGB(tempc, tempv);
-        ROS_INFO("O cluster %zu virou %zu clusters.", i+1, tempv.size());
+        ROS_INFO("O cluster %zu virou %d clusters.", i+1, tempv.size());
         // Adiciona ao novo vetor local os resultados
         local.insert(local.end(), tempv.begin(), tempv.end());
     }

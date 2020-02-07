@@ -73,6 +73,8 @@ vector<PointCloud<PointT>> parciais;
 vector<std::string> linhas_nvm;
 // Servico para mover os servos
 ros::ServiceClient comando_motor;
+// Publisher para ver a nuvem filtrada que esta acumulando
+ros::Publisher cloud_pub;
 
 ///////////////////////////////////////////////////////////////////////////////////////////
 double deg2raw(double deg){
@@ -141,12 +143,23 @@ void laserCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
             pc->transformCloudServoAngles(cloud_color_image, raw2deg(posicoes_pan[indice_posicao]), raw2deg(posicoes_tilt[indice_posicao]));
             pc->transformCloudServoAngles(cloud_filter     , raw2deg(posicoes_pan[indice_posicao]), raw2deg(posicoes_tilt[indice_posicao]));
             // Salvar dados parciais na pasta Dados_B9, no Desktop
-            ROS_WARN("Salvando dados de imagem e nuvem da aquisicao %d de %d ...", indice_posicao+1, posicoes_pan.size());
-            pc->saveImage(image_ptr->image, "imagem_"+std::to_string(indice_posicao+1));
+            ROS_WARN("Salvando dados de imagem e nuvem da aquisicao %d de %zu ...", indice_posicao+1, posicoes_pan.size());
+            std::string nome_imagem_atual = "imagem_"+std::to_string(indice_posicao+1);
+            pc->saveImage(image_ptr->image, nome_imagem_atual);
             pc->saveCloud(cloud_color_image, "p_"+std::to_string(indice_posicao+1));
             pc->saveCloud(cloud_filter, "pf_"+std::to_string(indice_posicao+1));
-            // Adcionar ao vetor a linha correspondente do NVM
-
+            /// Adcionar ao vetor a linha correspondente do NVM ///
+            // Calcula o centro
+            Eigen::Vector3f C;
+            C << 0, 0, 0;
+            // Calcula o quaternion correspondente
+            Eigen::AngleAxisf roll( 0, Eigen::Vector3f::UnitZ());
+            Eigen::AngleAxisf pitch(DEG2RAD(raw2deg(posicoes_tilt[indice_posicao])), Eigen::Vector3f::UnitX());
+            Eigen::AngleAxisf yaw(  DEG2RAD(raw2deg(posicoes_pan[ indice_posicao])), Eigen::Vector3f::UnitY());
+            Eigen::Quaternion<float> q = roll*yaw*pitch;
+            // Escreve a linha e armazena
+            linhas_nvm[indice_posicao] = pc->escreve_linha_imagem((1496.701399+1475.059238)/2, nome_imagem_atual, C, q);
+            //////////////////////
             // Somar a nuvem filtrada aqui na acumulada filtrada
             *acc_filt += *cloud_filter;
             // Adicionar nuvem original colorida no vetor de nuvens parciais
@@ -166,7 +179,7 @@ void laserCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
                 cmd.request.pan_pos  = posicoes_pan[indice_posicao];
                 cmd.request.tilt_pos = posicoes_tilt[indice_posicao];
                 if(comando_motor.call(cmd))
-                    ROS_INFO("Indo para a posicao %d de %d totais aquisitar nova nuvem", indice_posicao, posicoes_pan.size());
+                    ROS_INFO("Indo para a posicao %d de %zu totais aquisitar nova nuvem", indice_posicao, posicoes_pan.size());
             } else { // Se for a ultima, finalizar
                 // Voltando para o inicio
                 cmd.request.pan_pos  = posicoes_pan[0];
@@ -177,6 +190,8 @@ void laserCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
                 for(int i=0; i < parciais.size(); i++)
                     *acc += parciais[i];
                 pc->saveCloud(acc, "acumulada_hd");
+                // Salvando o NVM final
+                pc->compileFinalNVM(linhas_nvm);
                 // Finalizando o no e o ROS
                 fim_processo = true;
                 ROS_WARN("Finalizando tudo, conferir dados salvos.");
@@ -207,6 +222,7 @@ int main(int argc, char **argv)
 {
     ros::init(argc, argv, "scanner_aquisicao");
     ros::NodeHandle nh;
+    ROS_INFO("Iniciando o processo do SCANNER ...");
 
     // Preenchendo os vetores de posicao a ser escaneadas
     int step = 30; // [degrees]
@@ -220,6 +236,9 @@ int main(int argc, char **argv)
     acc      = (PointCloud<PointT  >::Ptr) new PointCloud<PointT  >();
     acc_filt = (PointCloud<PointT  >::Ptr) new PointCloud<PointT  >();
     parcial  = (PointCloud<PointXYZ>::Ptr) new PointCloud<PointXYZ>();
+    acc->header.frame_id      = "B9";
+    acc_filt->header.frame_id = "B9";
+    parcial->header.frame_id  = "B9";
     parciais.resize(posicoes_pan.size());
 
     // Inicia o vetor de linhas do arquivo NVM
@@ -240,12 +259,26 @@ int main(int argc, char **argv)
     pc = new ProcessCloud();
 
     // Subscribers dessincronizados para mensagens de laser, imagem e motores
-    ros::Subscriber sub_laser = nh.subscribe("/livox/lidar"                    , 100, laserCallback);
-    ros::Subscriber sub_cam   = nh.subscribe("/usb_cam/image_raw"              , 100, camCallback  );
+    ros::Subscriber sub_laser = nh.subscribe("/livox/lidar"                    ,   1, laserCallback);
+    ros::Subscriber sub_cam   = nh.subscribe("/usb_cam/image_raw"              ,   1, camCallback  );
     ros::Subscriber sub_dyn   = nh.subscribe("/dynamixel_angulos_sincronizados", 100, dynCallback  );
 
+    // Publisher da nuvem para ver ao vivo
+    cloud_pub = nh.advertise<sensor_msgs::PointCloud2>("/B9/acc_filt", 100);
+
+    ROS_INFO("Comecando a aquisicao ...");
+
     // O no so funciona uma vez, depois e encerrado
+    sensor_msgs::PointCloud2 cloud_msg;
+    cloud_msg.header.frame_id = "B9";
+    ros::Rate r(2);
     while(ros::ok()){
+        if(!acc_filt->empty()){
+            toROSMsg(*acc_filt, cloud_msg);
+            cloud_msg.header.stamp = ros::Time::now();
+            cloud_pub.publish(cloud_msg);
+            r.sleep();
+        }
         ros::spinOnce();
         // Fim do processo cancela o no
         if(fim_processo)

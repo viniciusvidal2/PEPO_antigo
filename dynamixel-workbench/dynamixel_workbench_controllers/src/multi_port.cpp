@@ -322,8 +322,8 @@ bool MultiPort::dynamixelStatePublish(uint8_t motor)
 //  }
 
   // Vinicius - publicando mensagem com os angulos sincronizados
-  angulos_sincronizados_msg.header.frame_id = "map";
-  angulos_sincronizados_msg.child_frame_id = "laser";
+  angulos_sincronizados_msg.header.frame_id = "B9";
+  angulos_sincronizados_msg.child_frame_id  = "cam";
   angulos_sincronizados_msg.header.stamp = ros::Time::now();
   angulos_sincronizados_pub.publish(angulos_sincronizados_msg);
 }

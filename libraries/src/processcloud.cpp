@@ -435,7 +435,7 @@ void ProcessCloud::writeNVM(string nome, string nome_imagem, Eigen::VectorXf par
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
 std::string ProcessCloud::escreve_linha_imagem(float foco, std::string nome, Eigen::MatrixXf C, Eigen::Quaternion<float> q){
-    std::string linha = nome;
+    std::string linha = pasta+nome+".png";
     // Adicionar foco
     linha = linha + " " + std::to_string(foco);
     // Adicionar quaternion
@@ -449,6 +449,20 @@ std::string ProcessCloud::escreve_linha_imagem(float foco, std::string nome, Eig
     return linha;
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
+void ProcessCloud::compileFinalNVM(vector<string> linhas){
+    // Anota num arquivo a partir do nome vindo
+    ofstream nvm(pasta+"cameras.nvm");
+    if(nvm.is_open()){
+
+        nvm << "NVM_V3\n\n";
+        nvm << std::to_string(linhas.size())+"\n"; // Quantas imagens, sempre uma aqui
+        for(int i=0; i < linhas.size(); i++)
+            nvm << linhas[i]; // Imagem com detalhes de camera
+
+    } // fim do if is open
+    nvm.close(); // Fechar para nao ter erro
+}
+/////////////////////////////////////////////////////////////////////////////////////////////////
 void ProcessCloud::applyPolinomialFilter(vector<PointCloud<PointTN>> &vetor_nuvens, int grau, double r){
     omp_set_dynamic(0);
     #pragma omp parallel for num_threads(vetor_nuvens.size())
@@ -457,16 +471,17 @@ void ProcessCloud::applyPolinomialFilter(vector<PointCloud<PointTN>> &vetor_nuve
         PointCloud<PointTN>::Ptr nuvem (new PointCloud<PointTN>());
         *nuvem = vetor_nuvens[i];
         // Se e muito grande deve filtrar por voxel porque senao e impossivel de passar o filtro
-        if(nuvem->size() > 300000){
-            float l = 0.01;
+        if(nuvem->size() > 1000000){
+            ROS_INFO("Precisou reduzir a nuvem %d de com %zu pontos ...", i, nuvem->size());
+            float l = 0.005;
             VoxelGrid<PointTN> voxel;
             voxel.setInputCloud(nuvem);
             voxel.setLeafSize(l, l, l);
             voxel.filter(*nuvem);
             StatisticalOutlierRemoval<PointTN> sor;
             sor.setInputCloud(nuvem);
-            sor.setMeanK(20);
-            sor.setStddevMulThresh(2);
+            sor.setMeanK(10);
+            sor.setStddevMulThresh(3);
             sor.filter(*nuvem);
         }
         pcl::search::KdTree<PointT>::Ptr tree_xyzrgb (new pcl::search::KdTree<PointT>());
