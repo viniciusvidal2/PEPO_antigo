@@ -58,14 +58,13 @@ int indice_posicao = 0; // Posicao do vetor de posicoes sendo observada no momen
 int contador_nuvem = 0, N = 400; // Quantas nuvens aquisitar em cada parcial
 vector<int> posicoes_pan, posicoes_tilt; // Posicoes a serem vasculhadas pelos motores
 // Inicia variaveis do motor PAN
-double raw_min_pan = 50, raw_max_pan = 3988;
-double deg_min_pan =  4, deg_max_pan =  350;
-double raw_atual = 0; // Seguranca
+double raw_min_pan = 133, raw_max_pan = 3979;
+double deg_min_pan =  11, deg_max_pan =  349;
 double deg_raw_pan = (deg_max_pan - deg_min_pan) / (raw_max_pan - raw_min_pan), raw_deg_pan = 1.0 / deg_raw_pan;
-double dentro = 2; // Raio de seguranca que estamos dentro ja
+double dentro = 2; // Raio de seguranca que estamos dentro ja [RAW]
 // Inicia variaveis do motor TILT - horizontal da offset para ser o zero
-double raw_min_tilt = 0, raw_hor_tilt = 50, raw_max_tilt = 100;
-double deg_min_tilt = 0, deg_hor_tilt = 50, deg_max_tilt = 100;
+double raw_min_tilt = 2085, raw_hor_tilt = 2143, raw_max_tilt = 2300;
+double deg_min_tilt =  183, deg_hor_tilt =  188, deg_max_tilt =  201;
 double deg_raw_tilt = (deg_max_tilt - deg_min_tilt) / (raw_max_tilt - raw_min_tilt), raw_deg_tilt = 1.0 / deg_raw_tilt;
 // Classe de processamento de nuvens
 ProcessCloud *pc;
@@ -192,8 +191,8 @@ void laserCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
                     ROS_INFO("Indo para a posicao %d de %zu totais aquisitar nova nuvem", indice_posicao, posicoes_pan.size());
             } else { // Se for a ultima, finalizar
                 // Voltando para o inicio
-                cmd.request.pan_pos  = posicoes_pan[0];
-                cmd.request.tilt_pos = posicoes_tilt[0];
+                cmd.request.pan_pos  = raw_min_pan;
+                cmd.request.tilt_pos = raw_min_tilt;
                 if(comando_motor.call(cmd))
                 ROS_INFO("Aquisitamos todas as nuvens, salvando tudo e indo para a posicao inicial ...");
                 // Somando todas na acumulada cheia e salvando a acumulada
@@ -232,8 +231,8 @@ void dynCallback(const nav_msgs::OdometryConstPtr& msg){
     }
     // Se ja tiver no fim do processo, confere se esta chegando no inicio pra dai desligar os motores
     if(fim_processo){
-        ROS_WARN("Estamos voltando ao inicio, %d para PAN e %d para TILT ...", int(abs(pan - posicoes_pan[0])), int(abs(tilt - posicoes_tilt[0])));
-        if(abs(pan - posicoes_pan[0]) <= dentro && abs(tilt - posicoes_tilt[0]) <= dentro){
+        ROS_WARN("Estamos voltando ao inicio, %d para PAN e %d para TILT ...", int(abs(pan - raw_min_pan)), int(abs(tilt - raw_min_tilt)));
+        if(abs(pan - raw_min_pan) <= dentro && abs(tilt - raw_min_tilt) <= dentro){
             ROS_WARN("Chegamos ao final, desligando ...");
             ros::shutdown();
         }
@@ -253,8 +252,8 @@ int main(int argc, char **argv)
     vector<double> tilts = {raw_min_tilt, raw_hor_tilt, raw_max_tilt}; // Tres tilts que vao rolar
     posicoes_pan.resize(int(deg_max_pan - deg_min_pan)/step); posicoes_tilt.resize(posicoes_pan.size());
     for(int i=deg_min_pan; i <= deg_max_pan; i=i+step){
-        posicoes_pan[i]  = deg2raw(i       , "pan" );
-        posicoes_tilt[i] = deg2raw(tilts[1], "tilt") + raw_hor_tilt; // Adiciona o offset aqui pois o motor tem que saber dele
+        posicoes_pan[i]  = deg2raw(i, "pan" );
+        posicoes_tilt[i] = tilts[1];
     }
 
     // Inicia nuvem acumulada final e aloca espaco para a quantidade de parciais
