@@ -94,7 +94,7 @@ class MultiPort
   bool setTorque(bool onoff);
   bool setPosition(uint32_t pan_pos, uint32_t tilt_pos);
   bool setPosition(uint32_t pan_pos);
-  void setSlope(); // VINICIUS
+  void setServosControllers(); // VINICIUS
 
   bool readValue(uint8_t motor, std::string addr_name);
   bool readDynamixelState(uint8_t motor);

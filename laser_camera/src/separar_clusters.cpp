@@ -105,7 +105,7 @@ int main(int argc, char **argv)
     cl.obtainPlanes(filtrada, vetor_planos, filtrada_sem_planos);
     cl.separateClustersByDistance(vetor_planos);
     cl.killSmallClusters(vetor_planos, 1);
-    ROS_INFO("Foram obtidos %d planos apos filtragem.", vetor_planos.size());
+    ROS_INFO("Foram obtidos %zu planos apos filtragem.", vetor_planos.size());
     vetor_planos_filt = vetor_planos;
 
     // Aplicando polinomios sobre os planos
@@ -117,7 +117,7 @@ int main(int argc, char **argv)
     cl.extractClustersRegionGrowingRGB(filtrada_sem_planos, vetor_clusters);
     cl.separateClustersByDistance(vetor_clusters);
     cl.killSmallClusters(vetor_clusters, 1);
-    ROS_INFO("Foram obtidos %d clusters apos filtragem.", vetor_clusters.size());
+    ROS_INFO("Foram obtidos %zu clusters apos filtragem.", vetor_clusters.size());
     vetor_clusters_filt = vetor_clusters;
 
     // Aplicando polinomio sobre clusters
