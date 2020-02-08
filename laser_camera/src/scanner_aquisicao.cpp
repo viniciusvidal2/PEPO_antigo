@@ -48,29 +48,29 @@ using namespace std;
 
 /// Definiçoes
 ///
-typedef PointXYZRGB PointT ;
+typedef PointXYZRGB PointT;
 
 /// Variaveis Globais
 ///
 cv_bridge::CvImagePtr image_ptr; // Ponteiro para imagem da camera
 bool aquisitando = false, nuvem_acumulada = false, aquisitar_imagem = false, fim_processo = false;
 int indice_posicao = 0; // Posicao do vetor de posicoes sendo observada no momento
-int contador_nuvem = 0, N = 400; // Quantas nuvens aquisitar em cada parcial
+int contador_nuvem = 0, N = 100; // Quantas nuvens aquisitar em cada parcial
 vector<int> posicoes_pan, posicoes_tilt; // Posicoes a serem vasculhadas pelos motores
 // Inicia variaveis do motor PAN
 double raw_min_pan = 133, raw_max_pan = 3979;
 double deg_min_pan =  11, deg_max_pan =  349;
-double deg_raw_pan = (deg_max_pan - deg_min_pan) / (raw_max_pan - raw_min_pan), raw_deg_pan = 1.0 / deg_raw_pan;
+double deg_raw_pan = 1, raw_deg_pan = 1; // Definidas no main
 double dentro = 2; // Raio de seguranca que estamos dentro ja [RAW]
 // Inicia variaveis do motor TILT - horizontal da offset para ser o zero
-double raw_min_tilt = 2085, raw_hor_tilt = 2143, raw_max_tilt = 2300;
-double deg_min_tilt =  183, deg_hor_tilt =  188, deg_max_tilt =  201;
-double deg_raw_tilt = (deg_max_tilt - deg_min_tilt) / (raw_max_tilt - raw_min_tilt), raw_deg_tilt = 1.0 / deg_raw_tilt;
+double raw_min_tilt = 2085, raw_hor_tilt = 2200, raw_max_tilt = 2280;
+double deg_min_tilt =  183, deg_hor_tilt =  195, deg_max_tilt =  200;
+double deg_raw_tilt = 1, raw_deg_tilt = 1; // Definidas no main
 // Classe de processamento de nuvens
 ProcessCloud *pc;
 // Nuvens de pontos e vetor de nuvens parciais
 PointCloud<PointXYZ>::Ptr parcial;
-PointCloud<PointT>::Ptr acc, acc_filt;
+PointCloud<PointT  >::Ptr acc, acc_filt;
 vector<PointCloud<PointT>> parciais;
 // Vetor com linhas do arquivo NVM
 vector<std::string> linhas_nvm;
@@ -80,18 +80,18 @@ ros::ServiceClient comando_motor;
 ros::Publisher cloud_pub;
 
 ///////////////////////////////////////////////////////////////////////////////////////////
-double deg2raw(double deg, std::string motor){
+int deg2raw(double deg, std::string motor){
     if(motor == "pan"){
-        return (deg - deg_min_pan)*raw_deg_pan + raw_min_pan;
+        return int((deg - deg_min_pan)*raw_deg_pan + raw_min_pan);
     } else {
-        return (deg - deg_min_tilt)*raw_deg_tilt + raw_min_tilt - raw_hor_tilt;
+        return int((deg - deg_min_tilt)*raw_deg_tilt + raw_min_tilt - raw_hor_tilt);
     }
 }
 double raw2deg(double raw, std::string motor){
     if(motor == "pan"){
-        return (raw - raw_min_pan)*deg_raw_pan + deg_min_pan;
+        return int((raw - raw_min_pan)*deg_raw_pan + deg_min_pan);
     } else {
-        return (raw - raw_min_pan)*deg_raw_pan + raw_min_tilt - deg_hor_tilt;
+        return int((raw - raw_min_pan)*deg_raw_pan + raw_min_tilt - deg_hor_tilt);
     }
 }
 ///////////////////////////////////////////////////////////////////////////////////////////
@@ -99,12 +99,9 @@ double raw2deg(double raw, std::string motor){
 /// Callback da camera
 ///
 void camCallback(const sensor_msgs::ImageConstPtr& msg){
-    // Se nao temos nuvem total, captura imagem
-    if(aquisitar_imagem){
-        // Aqui ja temos a imagem em ponteiro de opencv, depois de pegar uma desabilitar
+    // Aqui ja temos a imagem em ponteiro de opencv, depois de pegar uma desabilitar
+    if(aquisitar_imagem)
         image_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
-        aquisitar_imagem = false;
-    }
 }
 
 /// Callback do laser
@@ -117,12 +114,13 @@ void laserCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
         pcl::fromROSMsg (*msg, *cloud);
         *parcial += *cloud;
         // A nuvem ainda nao foi acumulada, frizar isso
-        nuvem_acumulada = false;
+        aquisitar_imagem = true;//nuvem_acumulada = false;
+        ROS_INFO("Acumulando nuvem %.2f pct ...", float(contador_nuvem)/float(N)*100);
         // Se total acumulado, travar o resto e trabalhar
         if(contador_nuvem == N){
             ROS_WARN("Nuvem %d foi acumulada, processando ...", indice_posicao+1);
             // Vira a variavel de controle de recebimento de imagens e da nuvem
-            aquisitar_imagem = true; nuvem_acumulada = true;
+            aquisitar_imagem = false; //nuvem_acumulada = true;
             // Injetando cor na nuvem
             PointCloud<PointT>::Ptr cloud_color (new PointCloud<PointT>());
             cloud_color->resize(parcial->size());
@@ -152,7 +150,7 @@ void laserCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
             sor.setStddevMulThresh(2);
             sor.filter(*cloud_filter);
             // Transformar nuvem de acordo com a posicao dos servos
-            ROS_WARN("Transformando nuvem segundo angulos dos servos ...");
+            ROS_WARN("Transformando nuvem segundo angulos dos servos: pan %.2f e tilt %.2f ...", raw2deg(posicoes_pan[indice_posicao], "pan"), raw2deg(posicoes_tilt[indice_posicao], "tilt"));
             pc->transformCloudServoAngles(cloud_color_image, raw2deg(posicoes_pan[indice_posicao], "pan"), raw2deg(posicoes_tilt[indice_posicao], "tilt"));
             pc->transformCloudServoAngles(cloud_filter     , raw2deg(posicoes_pan[indice_posicao], "pan"), raw2deg(posicoes_tilt[indice_posicao], "tilt"));
             // Salvar dados parciais na pasta Dados_B9, no Desktop
@@ -184,15 +182,15 @@ void laserCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
             dynamixel_workbench_msgs::JointCommand cmd;
             cmd.request.unit     = "raw";
             if(indice_posicao + 1 < posicoes_pan.size()){
-                indice_posicao++;
+                indice_posicao++; // Proximo ponto de observacao
                 cmd.request.pan_pos  = posicoes_pan[indice_posicao];
                 cmd.request.tilt_pos = posicoes_tilt[indice_posicao];
                 if(comando_motor.call(cmd))
-                    ROS_INFO("Indo para a posicao %d de %zu totais aquisitar nova nuvem", indice_posicao, posicoes_pan.size());
+                    ROS_INFO("Indo para a posicao %d de %zu totais aquisitar nova nuvem", indice_posicao+1, posicoes_pan.size());
             } else { // Se for a ultima, finalizar
                 // Voltando para o inicio
                 cmd.request.pan_pos  = raw_min_pan;
-                cmd.request.tilt_pos = raw_min_tilt;
+                cmd.request.tilt_pos = raw_min_tilt - 100; // Vai deitar mesmo
                 if(comando_motor.call(cmd))
                 ROS_INFO("Aquisitamos todas as nuvens, salvando tudo e indo para a posicao inicial ...");
                 // Somando todas na acumulada cheia e salvando a acumulada
@@ -204,7 +202,7 @@ void laserCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
                 // Finalizando o no e o ROS
                 fim_processo = true;
                 ROS_WARN("Finalizando tudo, conferir dados salvos.");
-            }            
+            }
             // Terminamos o processamento, virar flag
             ROS_WARN("Terminada aquisicao da nuvem %d", indice_posicao+1);
             aquisitando = false;
@@ -220,15 +218,11 @@ void dynCallback(const nav_msgs::OdometryConstPtr& msg){
     // As mensagens trazem angulos em unidade RAW
     double pan = msg->pose.pose.position.x, tilt = msg->pose.pose.position.y;
     // Se estiver perto do valor de posicao atual de gravacao, liberar a aquisicao
-    if(abs(pan - posicoes_pan[indice_posicao]) <= dentro && abs(tilt - posicoes_tilt[indice_posicao]) <= dentro){
-        // Enquanto a nuvem nao estiver acumulada
-        ros::Rate r(5);
-        while(!nuvem_acumulada){
-            aquisitando = true;
-            r.sleep();
-        }
+    if(abs(pan - posicoes_pan[indice_posicao]) <= dentro && abs(tilt - posicoes_tilt[indice_posicao]) <= dentro)
+        aquisitando = true;
+    else
         aquisitando = false;
-    }
+
     // Se ja tiver no fim do processo, confere se esta chegando no inicio pra dai desligar os motores
     if(fim_processo){
         ROS_WARN("Estamos voltando ao inicio, %d para PAN e %d para TILT ...", int(abs(pan - raw_min_pan)), int(abs(tilt - raw_min_tilt)));
@@ -247,13 +241,20 @@ int main(int argc, char **argv)
     ros::NodeHandle nh;
     ROS_INFO("Iniciando o processo do SCANNER ...");
 
+    sleep(3); // Esperar os motores ligarem e ficarem prontos
+
+    // Definindo as taxas raw - deg dos servos
+    deg_raw_pan  = (deg_max_pan  - deg_min_pan)  / (raw_max_pan  - raw_min_pan) ; raw_deg_pan  = 1/deg_raw_pan;
+    deg_raw_tilt = (deg_max_tilt - deg_min_tilt) / (raw_max_tilt - raw_min_tilt); raw_deg_tilt = 1/deg_raw_tilt;
+
     // Preenchendo os vetores de posicao a ser escaneadas - A FAZER inserir posicoes de tilt aqui
     int step = 30; // [degrees]
     vector<double> tilts = {raw_min_tilt, raw_hor_tilt, raw_max_tilt}; // Tres tilts que vao rolar
-    posicoes_pan.resize(int(deg_max_pan - deg_min_pan)/step); posicoes_tilt.resize(posicoes_pan.size());
-    for(int i=deg_min_pan; i <= deg_max_pan; i=i+step){
-        posicoes_pan[i]  = deg2raw(i, "pan" );
-        posicoes_tilt[i] = tilts[1];
+    posicoes_pan.resize(int(deg_max_pan - deg_min_pan)/step);
+    posicoes_tilt.resize(posicoes_pan.size());
+    for(int i=0; i < posicoes_pan.size(); i++){
+        posicoes_pan[i]  = deg2raw(deg_min_pan + double(i*step), "pan");
+        posicoes_tilt[i] = int(tilts[1]);
     }
 
     // Inicia nuvem acumulada final e aloca espaco para a quantidade de parciais
@@ -297,7 +298,7 @@ int main(int argc, char **argv)
     cloud_msg.header.frame_id = "B9";
     ros::Rate r(2);
     while(ros::ok()){
-        if(!acc_filt->empty()){
+        if(!acc_filt->size() > 0){
             toROSMsg(*acc_filt, cloud_msg);
             cloud_msg.header.stamp = ros::Time::now();
             cloud_pub.publish(cloud_msg);
