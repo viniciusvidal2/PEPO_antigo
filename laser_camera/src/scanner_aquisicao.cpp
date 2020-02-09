@@ -82,16 +82,16 @@ ros::Publisher cloud_pub;
 ///////////////////////////////////////////////////////////////////////////////////////////
 int deg2raw(double deg, std::string motor){
     if(motor == "pan"){
-        return int((deg - deg_min_pan)*raw_deg_pan + raw_min_pan);
+        return int((deg - deg_min_pan )*raw_deg_pan  + raw_min_pan);
     } else {
         return int((deg - deg_min_tilt)*raw_deg_tilt + raw_min_tilt - raw_hor_tilt);
     }
 }
 double raw2deg(double raw, std::string motor){
     if(motor == "pan"){
-        return int((raw - raw_min_pan)*deg_raw_pan + deg_min_pan);
+        return int((raw - raw_min_pan )*deg_raw_pan  + deg_min_pan);
     } else {
-        return int((raw - raw_min_pan)*deg_raw_pan + raw_min_tilt - deg_hor_tilt);
+        return int((raw - raw_min_tilt)*deg_raw_tilt + deg_min_tilt - deg_hor_tilt);
     }
 }
 ///////////////////////////////////////////////////////////////////////////////////////////
@@ -140,6 +140,7 @@ void laserCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
             // Filtrando por voxels e outliers - essa vai para visualizacao
             ROS_WARN("Filtrando nuvem ...");
             PointCloud<PointT>::Ptr cloud_filter (new PointCloud<PointT>());
+            cloud_filter->header.frame_id = "B9";
             VoxelGrid<PointT> voxel;
             voxel.setInputCloud(cloud_color_image);
             voxel.setLeafSize(0.01, 0.01, 0.01);
@@ -228,6 +229,7 @@ void dynCallback(const nav_msgs::OdometryConstPtr& msg){
         ROS_WARN("Estamos voltando ao inicio, %d para PAN e %d para TILT ...", int(abs(pan - raw_min_pan)), int(abs(tilt - raw_min_tilt)));
         if(abs(pan - raw_min_pan) <= dentro && abs(tilt - raw_min_tilt) <= dentro){
             ROS_WARN("Chegamos ao final, desligando ...");
+            system("gnome-terminal -x sh -c 'rosnode kill -a'");
             ros::shutdown();
         }
     }
@@ -242,9 +244,10 @@ int main(int argc, char **argv)
     ROS_INFO("Iniciando o processo do SCANNER ...");
 
     sleep(3); // Esperar os motores ligarem e ficarem prontos
+    ros::Rate r(2);
 
     // Definindo as taxas raw - deg dos servos
-    deg_raw_pan  = (deg_max_pan  - deg_min_pan)  / (raw_max_pan  - raw_min_pan) ; raw_deg_pan  = 1/deg_raw_pan;
+    deg_raw_pan  = (deg_max_pan  - deg_min_pan ) / (raw_max_pan  - raw_min_pan ); raw_deg_pan  = 1/deg_raw_pan;
     deg_raw_tilt = (deg_max_tilt - deg_min_tilt) / (raw_max_tilt - raw_min_tilt); raw_deg_tilt = 1/deg_raw_tilt;
 
     // Preenchendo os vetores de posicao a ser escaneadas - A FAZER inserir posicoes de tilt aqui
@@ -277,8 +280,12 @@ int main(int argc, char **argv)
     cmd.request.unit = "raw";
     cmd.request.pan_pos  = posicoes_pan[0];
     cmd.request.tilt_pos = posicoes_tilt[0];
-    if(comando_motor.call(cmd))
-        ROS_INFO("Enviando scanner para a posicao inicial ...");
+
+    while(!comando_motor.call(cmd)){
+        ROS_INFO("Iniciando comunicacao com os servos ...");
+        r.sleep();
+    }
+    ROS_INFO("Servos comunicando e indo para a posicao inicial ...");
 
     // Inicia classe de processo de nuvens
     pc = new ProcessCloud();
@@ -296,7 +303,6 @@ int main(int argc, char **argv)
     // O no so funciona uma vez, depois e encerrado
     sensor_msgs::PointCloud2 cloud_msg;
     cloud_msg.header.frame_id = "B9";
-    ros::Rate r(2);
     while(ros::ok()){
         if(!acc_filt->size() > 0){
             toROSMsg(*acc_filt, cloud_msg);
