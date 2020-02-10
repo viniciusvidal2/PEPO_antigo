@@ -132,11 +132,11 @@ void MultiPort::setServosControllers()
 
   pan_driver_->writeRegister("led",  1);
 
-  tilt_driver_->writeRegister("moving_speed", 30);
+  tilt_driver_->writeRegister("moving_speed", 10);
   tilt_driver_->writeRegister("cw_angle_limit" ,  1965); //1965 172 degrees
   tilt_driver_->writeRegister("ccw_angle_limit",  2300); //2300 202 degrees
 
-  tilt_driver_->writeRegister("p_gain", 60);
+  tilt_driver_->writeRegister("p_gain", 40);
   tilt_driver_->writeRegister("i_gain", 10);
   tilt_driver_->writeRegister("d_gain",  1);
 }
