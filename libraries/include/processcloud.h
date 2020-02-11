@@ -81,7 +81,7 @@ public:
   void colorCloudThroughDistance(PointCloud<PointTN>::Ptr nuvem);
   void transformToCameraFrame(PointCloud<PointTN>::Ptr nuvem);
   void transformToCameraFrame(PointCloud<PointT>::Ptr nuvem);
-  void transformCloudServoAngles(PointCloud<PointT>::Ptr cloud, double pan, double tilt);
+  void transformCloudServoAngles(PointCloud<PointT>::Ptr cloud, double pan, double tilt, nav_msgs::Odometry &msg);
   void createVirtualLaserImage(PointCloud<PointTN>::Ptr nuvem, std::string nome);
   void saveCloud(PointCloud<PointTN>::Ptr nuvem, string nome);
   void saveCloud(PointCloud<PointT>::Ptr nuvem, string nome);

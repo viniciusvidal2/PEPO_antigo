@@ -535,7 +535,7 @@ void ProcessCloud::transformCloudServoAngles(PointCloud<PointT>::Ptr cloud, doub
     // Rotacionar o vetor segundo matriz de rotacao vista acima
     C = rot*C;
     // Adicionar na transformacao
-    T.block<3,1>(1,3) = C;
+    T.block<3,1>(0,3) = C;
 
     // Preenche a mensagem de odometria do robo para mostrar no RViz
     msg.pose.pose.position.x = C(0); msg.pose.pose.position.y = C(1); msg.pose.pose.position.z = C(2);

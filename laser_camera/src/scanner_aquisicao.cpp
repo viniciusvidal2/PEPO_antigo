@@ -56,7 +56,7 @@ typedef PointXYZRGB PointT;
 cv_bridge::CvImagePtr image_ptr; // Ponteiro para imagem da camera
 bool aquisitando = false, transicao = false, aquisitar_imagem = false, fim_processo = false;
 int indice_posicao = 0; // Posicao do vetor de posicoes sendo observada no momento
-int contador_nuvem = 0, N = 400; // Quantas nuvens aquisitar em cada parcial
+int contador_nuvem = 0, N = 100; // Quantas nuvens aquisitar em cada parcial
 vector<int> posicoes_pan, posicoes_tilt; // Posicoes a serem vasculhadas pelos motores
 // Inicia variaveis do motor PAN
 double raw_min_pan = 133, raw_max_pan = 3979;
@@ -79,23 +79,24 @@ vector<std::string> linhas_nvm;
 ros::ServiceClient comando_motor;
 // Publisher para ver a nuvem filtrada que esta acumulando
 ros::Publisher cloud_pub;
+// Publisher para a odometria que estamos no momento
+ros::Publisher odom_pub;
+nav_msgs::Odometry odom_msg;
 // Testando sincronizar subscribers por mutex
 Mutex m;
 
 ///////////////////////////////////////////////////////////////////////////////////////////
 int deg2raw(double deg, std::string motor){
-    if(motor == "pan"){
+    if(motor == "pan")
         return int((deg - deg_min_pan )*raw_deg_pan  + raw_min_pan);
-    } else {
+    else
         return int((deg - deg_min_tilt)*raw_deg_tilt + raw_min_tilt - raw_hor_tilt);
-    }
 }
 double raw2deg(int raw, std::string motor){
-    if(motor == "pan"){
+    if(motor == "pan")
         return (double(raw) - raw_min_pan )*deg_raw_pan  + deg_min_pan;
-    } else {
+    else
         return (double(raw) - raw_min_tilt)*deg_raw_tilt + deg_min_tilt - deg_hor_tilt;
-    }
 }
 ///////////////////////////////////////////////////////////////////////////////////////////
 
@@ -142,7 +143,7 @@ void laserCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
             PassThrough<PointT> pass;
             pass.setInputCloud(cloud_color);
             pass.setFilterFieldName("z");
-            pass.setFilterLimits(0, 15); // Z metros de profundidade
+            pass.setFilterLimits(0, 55); // Z metros de profundidade
             pass.filter(*cloud_color);
             // Colorir pontos com calibracao default para visualizacao rapida
             ROS_WARN("Colorindo nuvem para salvar com parametros default ...");
@@ -163,8 +164,8 @@ void laserCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
             sor.filter(*cloud_filter);
             // Transformar nuvem de acordo com a posicao dos servos
             ROS_WARN("Transformando nuvem segundo angulos dos servos: pan %.2f e tilt %.2f ...", raw2deg(posicoes_pan[indice_posicao], "pan"), raw2deg(posicoes_tilt[indice_posicao], "tilt"));
-            pc->transformCloudServoAngles(cloud_color_image, raw2deg(posicoes_pan[indice_posicao], "pan"), raw2deg(posicoes_tilt[indice_posicao], "tilt"));
-            pc->transformCloudServoAngles(cloud_filter     , raw2deg(posicoes_pan[indice_posicao], "pan"), raw2deg(posicoes_tilt[indice_posicao], "tilt"));
+            pc->transformCloudServoAngles(cloud_color_image, raw2deg(posicoes_pan[indice_posicao], "pan"), raw2deg(posicoes_tilt[indice_posicao], "tilt"), odom_msg);
+            pc->transformCloudServoAngles(cloud_filter     , raw2deg(posicoes_pan[indice_posicao], "pan"), raw2deg(posicoes_tilt[indice_posicao], "tilt"), odom_msg);
             // Salvar dados parciais na pasta Dados_B9, no Desktop
             ROS_WARN("Salvando dados de imagem e nuvem da aquisicao %d de %zu ...", indice_posicao+1, posicoes_pan.size());
             std::string nome_imagem_atual = "imagem_"+std::to_string(indice_posicao+1);
@@ -274,8 +275,8 @@ int main(int argc, char **argv)
 
     // Preenchendo os vetores de posicao a ser escaneadas - A FAZER inserir posicoes de tilt aqui
     int step = 30; // [degrees]
-    vector<double> tilts = {raw_hor_tilt};//, raw_max_tilt, raw_min_tilt}; // Tres tilts que vao rolar
-    int vistas = int(deg_max_pan - deg_min_pan)/step + 1; // Vistas na horizontal
+    vector<double> tilts = {raw_hor_tilt, raw_max_tilt}; // Tres tilts que vao rolar
+    int vistas = 4;//int(deg_max_pan - deg_min_pan)/step + 1; // Vistas na horizontal
     posicoes_pan.resize(vistas * tilts.size());
     posicoes_tilt.resize(posicoes_pan.size());
     omp_set_dynamic(0);
@@ -321,13 +322,18 @@ int main(int argc, char **argv)
     // Inicia classe de processo de nuvens
     pc = new ProcessCloud();
 
-    // Subscribers dessincronizados para mensagens de laser, imagem e motores
-    ros::Subscriber sub_laser = nh.subscribe("/livox/lidar"                    , 10, laserCallback);
-    ros::Subscriber sub_cam   = nh.subscribe("/usb_cam/image_raw"              ,  10, camCallback  );
-    ros::Subscriber sub_dyn   = nh.subscribe("/dynamixel_angulos_sincronizados",  1, dynCallback  );
-
     // Publisher da nuvem para ver ao vivo
     cloud_pub = nh.advertise<sensor_msgs::PointCloud2>("/B9/acc_filt", 100);
+
+    // Publisher para odometria atual do robo
+    odom_pub  = nh.advertise<nav_msgs::Odometry>("B9/odom", 100);
+    odom_msg.header.frame_id = "B9";
+    odom_msg.child_frame_id  = "B9";
+
+    // Subscribers dessincronizados para mensagens de laser, imagem e motores
+    ros::Subscriber sub_laser = nh.subscribe("/livox/lidar"                    , 10, laserCallback);
+    ros::Subscriber sub_cam   = nh.subscribe("/usb_cam/image_raw"              , 10, camCallback  );
+    ros::Subscriber sub_dyn   = nh.subscribe("/dynamixel_angulos_sincronizados",  1, dynCallback  );
 
     ROS_INFO("Comecando a aquisicao ...");
 
@@ -338,7 +344,9 @@ int main(int argc, char **argv)
         if(acc_filt->size() > 0){
             toROSMsg(*acc_filt, cloud_msg);
             cloud_msg.header.stamp = ros::Time::now();
+            odom_msg.header.stamp = cloud_msg.header.stamp;
             cloud_pub.publish(cloud_msg);
+            odom_pub.publish(odom_msg);
             r.sleep();
         }
         ros::spinOnce();
