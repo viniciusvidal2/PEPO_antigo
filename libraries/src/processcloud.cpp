@@ -336,17 +336,10 @@ float ProcessCloud::normaldist(float x, float media, float dev){
 /////////////////////////////////////////////////////////////////////////////////////////////////
 Eigen::Matrix3f ProcessCloud::euler2matrix(float r, float p, float y){
     // Ja recebe os angulos aqui em radianos
-//    Eigen::AngleAxisf roll( r, Eigen::Vector3f::UnitZ());
-//    Eigen::AngleAxisf pitch(p, Eigen::Vector3f::UnitX());
-//    Eigen::AngleAxisf yaw(  y, Eigen::Vector3f::UnitY());
-//    Eigen::Quaternion<float> q = roll*yaw*pitch;
-
     Eigen::Matrix3f matrix;
     matrix = Eigen::AngleAxisf(y, Eigen::Vector3f::UnitY()) * Eigen::AngleAxisf(p, Eigen::Vector3f::UnitX());
 
     return matrix;
-
-//    return q.matrix();
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
 Mat ProcessCloud::correctColorCluster(Mat in){
@@ -518,34 +511,30 @@ void ProcessCloud::applyPolinomialFilter(vector<PointCloud<PointTN>> &vetor_nuve
     }
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
-void ProcessCloud::transformCloudServoAngles(PointCloud<PointT>::Ptr cloud, double pan, double tilt, nav_msgs::Odometry &msg){
-    /// Matriz de transformacao final
-    Eigen::Matrix4f T = Eigen::Matrix4f::Identity();
-
+void ProcessCloud::transformCloudServoAngles(PointCloud<PointT>::Ptr cloud, float pan, float tilt, nav_msgs::Odometry &msg, Eigen::Matrix4f &T, Eigen::Vector3f &C){
     /// Cria matriz de rotacao de acordo com angulos de pan e tilt
     // Angulos chegam em DEGREES - passar para RAD aqui
     // Pan - Yaw em torno de Y, negativo; Tilt - pitch em torno de X, negativo
-    Eigen::Matrix3f rot = euler2matrix(0, -DEG2RAD(tilt), -DEG2RAD(pan));
+    Eigen::Matrix3f rot = euler2matrix(0, -DEG2RAD(-tilt), -DEG2RAD(pan));
     T.block<3,3>(0, 0) = rot;
 
-    /// Calcular o novo centro de aquisicao (Walle desloca pois nao roda tilt sobre o eixo)
-    // Vetor de centro ja considerando a altura no eixo Y negativo
-    float altura_eixo = -0.18; // [m]
-    Eigen::Vector3f C{0, altura_eixo, 0};
-    // Rotacionar o vetor segundo matriz de rotacao vista acima
-    C = rot*C;
-    // Adicionar na transformacao
-    T.block<3,1>(1,3) = C;
-
+    /// Calcular o novo centro de aquisicao (Walle desloca pois nao roda tilt sobre o eixo)  
+    float altura_eixo = 0.255; // [m]
+    // Coordenada Y
+    float y = -altura_eixo*cos(DEG2RAD(-tilt));
+    // Coordenadas X e Z
+    float x = altura_eixo*sin(DEG2RAD(-tilt))*sin(DEG2RAD(-pan));
+    float z = altura_eixo*sin(DEG2RAD(-tilt))*cos(DEG2RAD(-pan));
+    // Vetor de centro
+    C << x, y, z;
+    T.block<3,1>(0, 3) = C;
     // Preenche a mensagem de odometria do robo para mostrar no RViz
     msg.pose.pose.position.x = C(0); msg.pose.pose.position.y = C(1); msg.pose.pose.position.z = C(2);
     Eigen::Quaternion<float> q(rot);
     msg.pose.pose.orientation.w = q.w(); msg.pose.pose.orientation.x = q.x();
     msg.pose.pose.orientation.y = q.y(); msg.pose.pose.orientation.z = q.z();
 
-    cout << "\n\nMatriz de rotacao:\n" << T << endl;
-    cout << "\nCentro:\n" << C.transpose() << endl << endl;
-
+    cout << "\n Centro:\n" << C.transpose() << endl;
     // Transforma a nuvem com a matriz de rotacao
     transformPointCloud(*cloud, *cloud, T);
 }

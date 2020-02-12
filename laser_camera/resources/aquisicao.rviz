@@ -9,6 +9,8 @@ Panels:
         - /PointCloud21
         - /Image1
         - /Odometry1
+        - /Odometry1/Shape1
+        - /Axes1
       Splitter Ratio: 0.458781362
     Tree Height: 404
   - Class: rviz/Selection
@@ -93,9 +95,9 @@ Visualization Manager:
           Color: 204; 51; 204
           Scale: 1
           Value: true
-        Value: true
+        Value: false
       Enabled: true
-      Keep: 5
+      Keep: 3
       Name: Odometry
       Position Tolerance: 0.100000001
       Shape:
@@ -113,9 +115,9 @@ Visualization Manager:
       Value: true
     - Class: rviz/Axes
       Enabled: true
-      Length: 1
+      Length: 0.400000006
       Name: Axes
-      Radius: 0.100000001
+      Radius: 0.0500000007
       Reference Frame: <Fixed Frame>
       Value: true
   Enabled: true
@@ -143,25 +145,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 5.27606535
+      Distance: 4.27570629
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.553379059
-        Y: 0.223402545
-        Z: 0.751045465
+        X: -0.51490742
+        Y: -0.343991935
+        Z: 1.46452951
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.0500000007
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: -1.47979641
+      Pitch: -1.53979635
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 4.95240736
+      Yaw: 4.69736433
     Saved: ~
 Window Geometry:
   Displays:

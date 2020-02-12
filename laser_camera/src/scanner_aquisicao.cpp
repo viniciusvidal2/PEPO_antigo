@@ -56,16 +56,18 @@ typedef PointXYZRGB PointT;
 cv_bridge::CvImagePtr image_ptr; // Ponteiro para imagem da camera
 bool aquisitando = false, transicao = false, aquisitar_imagem = false, fim_processo = false;
 int indice_posicao = 0; // Posicao do vetor de posicoes sendo observada no momento
-int contador_nuvem = 0, N = 100; // Quantas nuvens aquisitar em cada parcial
+int contador_nuvem = 0, N = 60; // Quantas nuvens aquisitar em cada parcial
 vector<int> posicoes_pan, posicoes_tilt; // Posicoes a serem vasculhadas pelos motores
+vector<double> graus_tilt; // Graus a serem enviados aos motores - melhor para controlar transformacao
 // Inicia variaveis do motor PAN
 double raw_min_pan = 133, raw_max_pan = 3979;
 double deg_min_pan =  11, deg_max_pan =  349;
 double deg_raw_pan, raw_deg_pan; // Definidas no main
 double dentro = 10; // Raio de seguranca que estamos dentro ja [RAW] (pelas contas aproximadas, 1 RAW = 0.08 degrees)
 // Inicia variaveis do motor TILT - horizontal da offset para ser o zero
-double raw_min_tilt = 1965, raw_hor_tilt = 2200, raw_max_tilt = 2300;
-double deg_min_tilt =  172, deg_hor_tilt =  193, deg_max_tilt =  202;
+double raw_min_tilt = 1985  , raw_hor_tilt = 2200, raw_max_tilt = 2300;
+double deg_min_tilt =   23.5, deg_hor_tilt =    0, deg_max_tilt =  -23.5;
+//double deg_min_tilt =  172, deg_hor_tilt =  193, deg_max_tilt =  202;
 double deg_raw_tilt, raw_deg_tilt; // Definidas no main
 // Classe de processamento de nuvens
 ProcessCloud *pc;
@@ -119,8 +121,6 @@ void laserCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
         *parcial += *cloud;
         // A nuvem ainda nao foi acumulada, frizar isso
         aquisitar_imagem = true;
-        if(remainder(float(contador_nuvem)/float(N)*100, 25.0) < 1)
-            ROS_INFO("Acumulando nuvem %.2f pct ...", float(contador_nuvem)/float(N)*100);
         // Se total acumulado, travar o resto e trabalhar
         if(contador_nuvem == N){
             m.lock();
@@ -163,9 +163,11 @@ void laserCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
             sor.setStddevMulThresh(2);
             sor.filter(*cloud_filter);
             // Transformar nuvem de acordo com a posicao dos servos
-            ROS_WARN("Transformando nuvem segundo angulos dos servos: pan %.2f e tilt %.2f ...", raw2deg(posicoes_pan[indice_posicao], "pan"), raw2deg(posicoes_tilt[indice_posicao], "tilt"));
-            pc->transformCloudServoAngles(cloud_color_image, raw2deg(posicoes_pan[indice_posicao], "pan"), raw2deg(posicoes_tilt[indice_posicao], "tilt"), odom_msg);
-            pc->transformCloudServoAngles(cloud_filter     , raw2deg(posicoes_pan[indice_posicao], "pan"), raw2deg(posicoes_tilt[indice_posicao], "tilt"), odom_msg);
+            float p = raw2deg(posicoes_pan[indice_posicao], "pan"), t = graus_tilt[indice_posicao];
+            Eigen::Matrix4f T = Eigen::Matrix4f::Identity();
+            Eigen::Vector3f C;
+            pc->transformCloudServoAngles(cloud_color_image, p, t, odom_msg, T, C);
+            pc->transformCloudServoAngles(cloud_filter     , p, t, odom_msg, T, C);
             // Salvar dados parciais na pasta Dados_B9, no Desktop
             ROS_WARN("Salvando dados de imagem e nuvem da aquisicao %d de %zu ...", indice_posicao+1, posicoes_pan.size());
             std::string nome_imagem_atual = "imagem_"+std::to_string(indice_posicao+1);
@@ -173,14 +175,17 @@ void laserCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
             pc->saveCloud(cloud_color_image, "p_"+std::to_string(indice_posicao+1));
             pc->saveCloud(cloud_filter, "pf_"+std::to_string(indice_posicao+1));
             /// Adcionar ao vetor a linha correspondente do NVM ///
-            // Calcula o centro
-            Eigen::Vector3f C {0, 0, 0};
+            Eigen::Matrix4f T_ = T.inverse(); // Inverte para escrever a camera;
             // Calcula o quaternion correspondente
-            Eigen::AngleAxisf pitch(DEG2RAD(raw2deg(posicoes_tilt[indice_posicao], "tilt")), Eigen::Vector3f::UnitX());
-            Eigen::AngleAxisf yaw(  DEG2RAD(raw2deg(posicoes_pan[ indice_posicao], "pan" )), Eigen::Vector3f::UnitY());
-            Eigen::Quaternion<float> q = yaw*pitch;
+            Eigen::Matrix3f rot_cam;
+            rot_cam << T_.block<3,3>(0, 0);
+            Eigen::Quaternion<float> q(rot_cam);
+            // Calcula o centro
+//            Eigen::MatrixXf C(3, 1);
+//            C << -rot_cam*T.block<3,1>(0, 3);
+            cout << "\nCentro oficial:\n" <<  -C.transpose() << endl << endl;
             // Escreve a linha e armazena
-            linhas_nvm[indice_posicao] = pc->escreve_linha_imagem((1496.701399+1475.059238)/2, nome_imagem_atual, C, q.inverse());
+            linhas_nvm[indice_posicao] = pc->escreve_linha_imagem((1496.701399+1475.059238)/2, nome_imagem_atual, C, q);
             //////////////////////
             // Somar a nuvem filtrada aqui na acumulada filtrada
             *acc_filt += *cloud_filter;
@@ -203,7 +208,7 @@ void laserCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
                 if(comando_motor.call(cmd))
                     ROS_INFO("Indo para a posicao %d de %zu totais aquisitar nova nuvem", indice_posicao+1, posicoes_pan.size());
                 if(posicoes_tilt[indice_posicao] != posicoes_tilt[indice_posicao-1])
-                    sleep(3); // Seguranca para nao capturar nada balancando
+                    sleep(2); // Seguranca para nao capturar nada balancando
             } else { // Se for a ultima, finalizar
                 // Voltando para o inicio
                 cmd.request.pan_pos  = raw_min_pan;
@@ -273,21 +278,23 @@ int main(int argc, char **argv)
     deg_raw_pan  = (deg_max_pan  - deg_min_pan ) / (raw_max_pan  - raw_min_pan ); raw_deg_pan  = 1/deg_raw_pan;
     deg_raw_tilt = (deg_max_tilt - deg_min_tilt) / (raw_max_tilt - raw_min_tilt); raw_deg_tilt = 1/deg_raw_tilt;
 
-    // Preenchendo os vetores de posicao a ser escaneadas - A FAZER inserir posicoes de tilt aqui
-    int step = 30; // [degrees]
-    vector<double> tilts = {raw_hor_tilt, raw_max_tilt}; // Tres tilts que vao rolar
-    int vistas = 4;//int(deg_max_pan - deg_min_pan)/step + 1; // Vistas na horizontal
+    // Preenchendo os vetores de posicao a ser escaneadas
+    int step = 15; // [degrees]
+    vector<double> tilts   = {raw_hor_tilt, raw_min_tilt, raw_max_tilt}; // Tres tilts que vao rolar
+    vector<double> tilts_g = {deg_hor_tilt, deg_min_tilt, deg_max_tilt};
+    int vistas = 2;//int(deg_max_pan - deg_min_pan)/step + 1; // Vistas na horizontal
     posicoes_pan.resize(vistas * tilts.size());
-    posicoes_tilt.resize(posicoes_pan.size());
+    posicoes_tilt.resize(posicoes_pan.size()); graus_tilt.resize(posicoes_pan.size());
     omp_set_dynamic(0);
     #pragma omp parallel for num_threads(tilts.size())
     for(int j=0; j < tilts.size(); j++){
         for(int i=0; i < vistas; i++){
-            if(remainder(j, 2) == 0) // Define assim um vai e volta no scanner, ao inves de voltar ao inicio
+//            if(remainder(j, 2) == 0) // Define assim um vai e volta no scanner, ao inves de voltar ao inicio
                 posicoes_pan[i + j*vistas] = deg2raw(deg_min_pan + double(i*step), "pan");
-            else
-                posicoes_pan[i + j*vistas] = deg2raw(deg_max_pan - double(i*step), "pan");
+//            else
+//                posicoes_pan[i + j*vistas] = deg2raw(deg_max_pan - double(i*step), "pan");
             posicoes_tilt[i + j*vistas] = int(tilts[j]);
+            graus_tilt[i + j*vistas] = tilts_g[j];
         }
     }
 
@@ -313,7 +320,7 @@ int main(int argc, char **argv)
     cmd.request.tilt_pos = posicoes_tilt[0];
 
     while(!comando_motor.call(cmd)){
-        ROS_INFO("Iniciando comunicacao com os servos ...");
+        ROS_ERROR("Falha na comunicacao com os servos !! ...");
         r.sleep();
     }
     ROS_INFO("Servos comunicando e indo para a posicao inicial ...");
