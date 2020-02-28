@@ -157,7 +157,7 @@ public:
 
     // start the camera
     cam_.start(video_device_name_.c_str(), io_method, pixel_format, image_width_,
-		     image_height_, framerate_);
+                     image_height_, framerate_);
 
     // set camera parameters
     if (brightness_ >= 0)
