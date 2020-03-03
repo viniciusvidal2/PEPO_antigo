@@ -42,9 +42,11 @@ typedef PointXYZRGBNormal PointTN;
 ///
 int main(int argc, char **argv)
 {
-    // Inicia no do
+    // Inicia no
     ros::init(argc, argv, "separar_clusters");
     ros::NodeHandle nh;
+
+    pcl::console::setVerbosityLevel(pcl::console::L_ALWAYS);
 
     // Inicia variaveis
     PointCloud<PointTN>::Ptr inicial             (new PointCloud<PointTN>);
@@ -64,7 +66,7 @@ int main(int argc, char **argv)
     ROS_INFO("Carregando a nuvem de pontos ...");
     char* home;
     home = getenv("HOME");
-    loadPLYFile<PointTN>(std::string(home)+"/Desktop/Dados_B9/nuvem_final.ply", *inicial);
+    loadPLYFile<PointTN>(std::string(home)+"/Desktop/Dados_B9/acumulada_hd.ply", *inicial);
 
     // Filtra por outliers
     struct stat buffer;
@@ -88,22 +90,22 @@ int main(int argc, char **argv)
         loadPLYFile<PointTN>(nuvem_covariancia_nome, *filtrada);
     }
     if(ambiente == 2){ // Se ambiente externo, so tirar mesmo alguns ruidos
-        ROS_INFO("Ambiente externo, filtrando sommente por outliers ...");
+        ROS_INFO("Ambiente externo, filtrando somente por outliers ...");
         *filtrada = *inicial;
     }
 
     // Projeta sobre imagem com parametros default para ajudar a separar clusters por cor
-    ROS_INFO("Adicionando cor com parametros default ...");
-    float fx = 1496.701399, fy = 1475.059238, tx = 2, ty = 9;
-    Mat imagem = imread(std::string(home)+"/Desktop/Dados_B9/camera_rgb.png");
-    PointCloud<PointTN>::Ptr temp_cor (new PointCloud<PointTN>);
-    pc.colorCloudWithCalibratedImage(filtrada, temp_cor, imagem, fx, fy, tx, ty);
-    *filtrada = *temp_cor;
+//    ROS_INFO("Adicionando cor com parametros default ...");
+//    float fx = 1496.701399, fy = 1475.059238, tx = 2, ty = 9;
+//    Mat imagem = imread(std::string(home)+"/Desktop/Dados_B9/camera_rgb.png");
+//    PointCloud<PointTN>::Ptr temp_cor (new PointCloud<PointTN>);
+//    pc.colorCloudWithCalibratedImage(filtrada, temp_cor, imagem, fx, fy, tx, ty);
+//    *filtrada = *temp_cor;
 
     // Extrai um vetor de planos e retorna nuvem sem eles
     ROS_INFO("Obtendo planos na nuvem ...");
     cl.obtainPlanes(filtrada, vetor_planos, filtrada_sem_planos);
-    cl.separateClustersByDistance(vetor_planos);
+//    cl.separateClustersByDistance(vetor_planos);
     cl.killSmallClusters(vetor_planos, 1);
     ROS_INFO("Foram obtidos %zu planos apos filtragem.", vetor_planos.size());
     vetor_planos_filt = vetor_planos;
@@ -115,14 +117,14 @@ int main(int argc, char **argv)
     // Extrai clusters da nuvem de pontos que restou
     ROS_INFO("Obtendo clusters para o restante da nuvem ...");
     cl.extractClustersRegionGrowingRGB(filtrada_sem_planos, vetor_clusters);
-    cl.separateClustersByDistance(vetor_clusters);
+//    cl.separateClustersByDistance(vetor_clusters);
     cl.killSmallClusters(vetor_clusters, 1);
     ROS_INFO("Foram obtidos %zu clusters apos filtragem.", vetor_clusters.size());
     vetor_clusters_filt = vetor_clusters;
 
     // Aplicando polinomio sobre clusters
-//    ROS_INFO("Filtrando por polinomio os clusters ...");
-//    pc.applyPolinomialFilter(vetor_clusters_filt, 5, 0.15);
+    ROS_INFO("Filtrando por polinomio os clusters ...");
+    pc.applyPolinomialFilter(vetor_clusters_filt, 5, 0.15);
 
     // Definindo paleta de cores de cada plano e cluster
     cl.setColorPallete(vetor_planos.size() + vetor_clusters.size());

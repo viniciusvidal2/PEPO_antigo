@@ -470,7 +470,7 @@ void ProcessCloud::applyPolinomialFilter(vector<PointCloud<PointTN>> &vetor_nuve
         PointCloud<PointTN>::Ptr nuvem (new PointCloud<PointTN>());
         *nuvem = vetor_nuvens[i];
         // Se e muito grande deve filtrar por voxel porque senao e impossivel de passar o filtro
-        if(nuvem->size() > 1000000){
+        if(nuvem->size() > 600000){
             ROS_INFO("Precisou reduzir a nuvem %d de com %zu pontos ...", i, nuvem->size());
             float l = 0.005;
             VoxelGrid<PointTN> voxel;
@@ -483,31 +483,33 @@ void ProcessCloud::applyPolinomialFilter(vector<PointCloud<PointTN>> &vetor_nuve
             sor.setStddevMulThresh(3);
             sor.filter(*nuvem);
         }
-        pcl::search::KdTree<PointT>::Ptr tree_xyzrgb (new pcl::search::KdTree<PointT>());
-        // Separando nuvem em nuvem de pontos XYZ, nuvem XYZRGB e so as normais
-        PointCloud<PointT>::Ptr cloudxyzrgb (new PointCloud<PointT>());
-        cloudxyzrgb->resize(nuvem->size());
-        ROS_INFO("Separando nuvem %d para processar ...", i+1);
-        #pragma omp parallel for
-        for(size_t i=0; i < nuvem->size(); i++){
-            PointT t;
-            t.x = nuvem->points[i].x; t.y = nuvem->points[i].y; t.z = nuvem->points[i].z;
-            t.r = nuvem->points[i].r; t.g = nuvem->points[i].g; t.b = nuvem->points[i].b;
-            cloudxyzrgb->points[i] = t;
+        if(nuvem->size() < 400000){ // Senao demora muito para passar o polinomio
+            pcl::search::KdTree<PointT>::Ptr tree_xyzrgb (new pcl::search::KdTree<PointT>());
+            // Separando nuvem em nuvem de pontos XYZ, nuvem XYZRGB e so as normais
+            PointCloud<PointT>::Ptr cloudxyzrgb (new PointCloud<PointT>());
+            cloudxyzrgb->resize(nuvem->size());
+            ROS_INFO("Separando nuvem %d para processar ...", i+1);
+            #pragma omp parallel for
+            for(size_t i=0; i < nuvem->size(); i++){
+                PointT t;
+                t.x = nuvem->points[i].x; t.y = nuvem->points[i].y; t.z = nuvem->points[i].z;
+                t.r = nuvem->points[i].r; t.g = nuvem->points[i].g; t.b = nuvem->points[i].b;
+                cloudxyzrgb->points[i] = t;
+            }
+            // Passar filtro polinomial
+            ROS_INFO("Aplicando filtro polinomial na nuvem %d com %zu pontos ...", i+1, nuvem->size());
+            PointCloud<PointTN>::Ptr saida_poli (new PointCloud<PointTN>());
+            MovingLeastSquares<PointT, PointTN> mls;
+            mls.setComputeNormals(true);
+            mls.setInputCloud(cloudxyzrgb);
+            mls.setPolynomialOrder(grau);
+            mls.setSearchMethod(tree_xyzrgb);
+            mls.setSearchRadius(r);
+            mls.process(*saida_poli);
+            this->calculateNormals(saida_poli);
+            vetor_nuvens[i] = *saida_poli;
+            ROS_INFO("Nuvem %d filtrada.", i+1);
         }
-        // Passar filtro polinomial
-        ROS_INFO("Aplicando filtro polinomial na nuvem %d com %zu pontos ...", i+1, nuvem->size());
-        PointCloud<PointTN>::Ptr saida_poli (new PointCloud<PointTN>());
-        MovingLeastSquares<PointT, PointTN> mls;
-        mls.setComputeNormals(true);
-        mls.setInputCloud(cloudxyzrgb);
-        mls.setPolynomialOrder(grau);
-        mls.setSearchMethod(tree_xyzrgb);
-        mls.setSearchRadius(r);
-        mls.process(*saida_poli);
-        this->calculateNormals(saida_poli);
-        vetor_nuvens[i] = *saida_poli;
-        ROS_INFO("Nuvem %d filtrada.", i+1);
     }
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
