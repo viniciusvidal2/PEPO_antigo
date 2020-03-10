@@ -324,10 +324,10 @@ void ProcessCloud::saveCloud(PointCloud<PointT>::Ptr nuvem, std::string nome){
 /////////////////////////////////////////////////////////////////////////////////////////////////
 void ProcessCloud::saveImage(cv::Mat img, string nome){
     std::string final = pasta + nome + ".png";
-    vector<int> params;
-    params.push_back(CV_IMWRITE_PNG_COMPRESSION);
-    params.push_back(9);
-    cv::imwrite(final, img, params);
+//    vector<int> params;
+//    params.push_back(CV_IMWRITE_PNG_COMPRESSION);
+//    params.push_back(9);
+    cv::imwrite(final, img);//, params);
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
 float ProcessCloud::normaldist(float x, float media, float dev){
