@@ -8,7 +8,7 @@ project(servos60kg)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-  sensor_msgs nav_msgs std_msgs
+  message_generation sensor_msgs nav_msgs std_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -52,11 +52,10 @@ find_package(catkin REQUIRED COMPONENTS
 # )
 
 ## Generate services in the 'srv' folder
-# add_service_files(
-#   FILES
-#   Service1.srv
-#   Service2.srv
-# )
+ add_service_files(
+   FILES
+   position.srv
+ )
 
 ## Generate actions in the 'action' folder
 # add_action_files(

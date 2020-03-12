@@ -1,4 +1,4 @@
-int64 a
-int64 b
+float64 pan
+float64 tilt
 ---
-int64 sum
+int8 result
