@@ -4,9 +4,7 @@ project(servos60kg)
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++11)
 
-find_package(catkin REQUIRED COMPONENTS
-  message_generation sensor_msgs nav_msgs std_msgs geometry_msgs
-)
+find_package(catkin REQUIRED COMPONENTS message_generation sensor_msgs nav_msgs std_msgs geometry_msgs)
 
 ## Generate messages in the 'msg' folder
 # add_message_files(
@@ -18,8 +16,13 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate services in the 'srv' folder
  add_service_files(
    FILES
-   position.srv
+   Position.srv
  )
+
+generate_messages(
+  DEPENDENCIES
+  std_msgs
+)
 
 catkin_package(
 #  INCLUDE_DIRS include

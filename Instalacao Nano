@@ -24,3 +24,13 @@ https://github.com/Livox-SDK/Livox-SDK
 
 8- Mandar compilar tudo novamente, deveria encontrar tudo e dar somente uns warnings.
 
+9- Instalar as bibliotecas de python para os servos:
+sudo apt install python3-pip
+sudo pip3 install adafruit-circuitpython-servokit
+Para testar:
+python3
+from adafruit_servokit import ServoKit
+kit = ServoKit(channels=16)
+kit.servo[0].angle = 30
+
+

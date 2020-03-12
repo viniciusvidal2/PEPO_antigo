@@ -5,11 +5,7 @@ project(laser_camera)
 add_compile_options(-std=c++11)
 
 find_package(OpenCV REQUIRED)
-find_package(catkin REQUIRED COMPONENTS roscpp cv_bridge sensor_msgs std_msgs image_transport nav_msgs pcl_ros tf2_ros tf tf_conversions camera_calibration_parsers camera_info_manager image_geometry laser_geometry
-#  roscpp sensor_msgs laser_geometry nav_msgs cv_bridge pcl_ros std_msgs
-#  tf2_ros tf tf_conversions camera_calibration_parsers camera_info_manager
-#  image_geometry laser_geometry
-#  dynamixel_sdk dynamixel_workbench_toolbox dynamixel_workbench_msgs
+find_package(catkin REQUIRED COMPONENTS roscpp cv_bridge sensor_msgs std_msgs image_transport nav_msgs pcl_ros tf2_ros tf tf_conversions camera_calibration_parsers camera_info_manager image_geometry laser_geometry servos60kg
 )
 find_package(OpenMP REQUIRED)
 if(OPENMP_FOUND)
@@ -24,7 +20,7 @@ include_directories(${PCL_INCLUDE_DIRS})
 include_directories(../libraries/include)
 include_directories(${OpenMP_INCLUDE_DIRS})
 
-catkin_package(CATKIN_DEPENDS DEPENDS OpenMP roscpp cv_bridge sensor_msgs std_msgs image_transport nav_msgs pcl_ros tf2_ros tf tf_conversions camera_calibration_parsers camera_info_manager image_geometry laser_geometry)
+catkin_package(CATKIN_DEPENDS DEPENDS roscpp cv_bridge sensor_msgs std_msgs image_transport nav_msgs pcl_ros tf2_ros tf tf_conversions camera_calibration_parsers camera_info_manager image_geometry laser_geometry servos60kg)
 
 add_executable(scanner_aquisicao src/scanner_aquisicao.cpp ../libraries/src/processcloud.cpp)
 target_compile_options(scanner_aquisicao PRIVATE ${OpenMP_FLAGS})
