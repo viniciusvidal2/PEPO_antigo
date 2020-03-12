@@ -33,11 +33,6 @@
 #include <Eigen/Dense>
 #include <Eigen/Core>
 
-#include <dynamixel_workbench_msgs/DynamixelCommand.h>
-#include <dynamixel_workbench_msgs/DynamixelInfo.h>
-#include <dynamixel_workbench_msgs/JointCommand.h>
-#include <dynamixel_workbench_msgs/DynamixelState.h>
-
 #include "../../libraries/include/processcloud.h"
 
 /// Namespaces
@@ -199,22 +194,22 @@ void laserCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
             ROS_WARN("Terminada aquisicao da nuvem %d", indice_posicao+1);
             aquisitando = false;
             // Enviar os servos para a proxima posicao, se nao for a ultima ja
-            dynamixel_workbench_msgs::JointCommand cmd;
-            cmd.request.unit = "raw";
-            if(indice_posicao + 1 < posicoes_pan.size()){
-                indice_posicao++; // Proximo ponto de observacao
-                cmd.request.pan_pos  = posicoes_pan[indice_posicao];
-                cmd.request.tilt_pos = posicoes_tilt[indice_posicao];
-                if(comando_motor.call(cmd))
-                    ROS_INFO("Indo para a posicao %d de %zu totais aquisitar nova nuvem", indice_posicao+1, posicoes_pan.size());
-                if(posicoes_tilt[indice_posicao] != posicoes_tilt[indice_posicao-1])
-                    sleep(2); // Seguranca para nao capturar nada balancando
-            } else { // Se for a ultima, finalizar
-                // Voltando para o inicio
-                cmd.request.pan_pos  = raw_min_pan;
-                cmd.request.tilt_pos = posicoes_tilt[indice_posicao]; // Vai deitar mesmo
-                if(comando_motor.call(cmd))
-                ROS_INFO("Aquisitamos todas as nuvens, salvando tudo e indo para a posicao inicial ...");
+//            dynamixel_workbench_msgs::JointCommand cmd;
+//            cmd.request.unit = "raw";
+//            if(indice_posicao + 1 < posicoes_pan.size()){
+//                indice_posicao++; // Proximo ponto de observacao
+//                cmd.request.pan_pos  = posicoes_pan[indice_posicao];
+//                cmd.request.tilt_pos = posicoes_tilt[indice_posicao];
+//                if(comando_motor.call(cmd))
+//                    ROS_INFO("Indo para a posicao %d de %zu totais aquisitar nova nuvem", indice_posicao+1, posicoes_pan.size());
+//                if(posicoes_tilt[indice_posicao] != posicoes_tilt[indice_posicao-1])
+//                    sleep(2); // Seguranca para nao capturar nada balancando
+//            } else { // Se for a ultima, finalizar
+//                // Voltando para o inicio
+//                cmd.request.pan_pos  = raw_min_pan;
+//                cmd.request.tilt_pos = posicoes_tilt[indice_posicao]; // Vai deitar mesmo
+//                if(comando_motor.call(cmd))
+//                ROS_INFO("Aquisitamos todas as nuvens, salvando tudo e indo para a posicao inicial ...");
                 // Somando todas na acumulada cheia e salvando a acumulada
                 for(int i=0; i < parciais.size(); i++)
                     *acc += parciais[i];
@@ -224,7 +219,7 @@ void laserCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
                 // Finalizando o no e o ROS
                 fim_processo = true;
                 ROS_WARN("Finalizando tudo, conferir dados salvos.");
-            }
+//            }
             m.unlock();
         } else {
             contador_nuvem++;
@@ -234,27 +229,27 @@ void laserCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
 
 /// Subscriber dos servos
 ///
-void dynCallback(const nav_msgs::OdometryConstPtr& msg){
-    // As mensagens trazem angulos em unidade RAW
-    int pan = int(msg->pose.pose.position.x), tilt = int(msg->pose.pose.position.y);
-    // Se estiver perto do valor de posicao atual de gravacao, liberar a aquisicao
-    if(abs(pan - posicoes_pan[indice_posicao]) <= dentro && abs(tilt - posicoes_tilt[indice_posicao]) <= dentro){
-        aquisitando = true;
-        posicoes_pan[indice_posicao] = pan; posicoes_tilt[indice_posicao] = tilt; // Para ficar mais preciso ainda na transformacao
-    } else {
-        aquisitando = false;
-        ROS_INFO("Faltam %d e %d para proxima aquisicao ...", abs(pan - posicoes_pan[indice_posicao]), abs(tilt - posicoes_tilt[indice_posicao]));
-    }
-    // Se ja tiver no fim do processo, confere se esta chegando no inicio pra dai desligar os motores
-    if(fim_processo){
-        ROS_WARN("Estamos voltando ao inicio, %d para PAN e %d para TILT ...", int(abs(pan - raw_min_pan)), int(abs(tilt - raw_min_tilt)));
-        if(abs(pan - raw_min_pan) <= dentro && abs(tilt - posicoes_tilt[indice_posicao]) <= dentro){
-            ROS_WARN("Chegamos ao final, desligando ...");
-            system("gnome-terminal -x sh -c 'rosnode kill -a'");
-            ros::shutdown();
-        }
-    }
-}
+//void dynCallback(const nav_msgs::OdometryConstPtr& msg){
+//    // As mensagens trazem angulos em unidade RAW
+//    int pan = int(msg->pose.pose.position.x), tilt = int(msg->pose.pose.position.y);
+//    // Se estiver perto do valor de posicao atual de gravacao, liberar a aquisicao
+//    if(abs(pan - posicoes_pan[indice_posicao]) <= dentro && abs(tilt - posicoes_tilt[indice_posicao]) <= dentro){
+//        aquisitando = true;
+//        posicoes_pan[indice_posicao] = pan; posicoes_tilt[indice_posicao] = tilt; // Para ficar mais preciso ainda na transformacao
+//    } else {
+//        aquisitando = false;
+//        ROS_INFO("Faltam %d e %d para proxima aquisicao ...", abs(pan - posicoes_pan[indice_posicao]), abs(tilt - posicoes_tilt[indice_posicao]));
+//    }
+//    // Se ja tiver no fim do processo, confere se esta chegando no inicio pra dai desligar os motores
+//    if(fim_processo){
+//        ROS_WARN("Estamos voltando ao inicio, %d para PAN e %d para TILT ...", int(abs(pan - raw_min_pan)), int(abs(tilt - raw_min_tilt)));
+//        if(abs(pan - raw_min_pan) <= dentro && abs(tilt - posicoes_tilt[indice_posicao]) <= dentro){
+//            ROS_WARN("Chegamos ao final, desligando ...");
+//            system("gnome-terminal -x sh -c 'rosnode kill -a'");
+//            ros::shutdown();
+//        }
+//    }
+//}
 
 /// Main
 ///
@@ -311,20 +306,20 @@ int main(int argc, char **argv)
     linhas_nvm.resize(posicoes_pan.size());
 
     // Inicia servico para mexer os servos
-    comando_motor = nh.serviceClient<dynamixel_workbench_msgs::JointCommand>("/joint_command");
+//    comando_motor = nh.serviceClient<dynamixel_workbench_msgs::JointCommand>("/joint_command");
 
     // Enviando scanner para o inicio
-    dynamixel_workbench_msgs::JointCommand cmd;
-    cmd.request.unit = "raw";
-    cmd.request.pan_pos  = posicoes_pan[0];
-    cmd.request.tilt_pos = posicoes_tilt[0];
+//    dynamixel_workbench_msgs::JointCommand cmd;
+//    cmd.request.unit = "raw";
+//    cmd.request.pan_pos  = posicoes_pan[0];
+//    cmd.request.tilt_pos = posicoes_tilt[0];
 
-    while(!comando_motor.call(cmd)){
-        ROS_ERROR("Falha na comunicacao com os servos !! ...");
-        r.sleep();
-    }
-    ROS_INFO("Servos comunicando e indo para a posicao inicial ...");
-    sleep(4); // Esperar os servos pararem de balancar
+//    while(!comando_motor.call(cmd)){
+//        ROS_ERROR("Falha na comunicacao com os servos !! ...");
+//        r.sleep();
+//    }
+//    ROS_INFO("Servos comunicando e indo para a posicao inicial ...");
+//    sleep(4); // Esperar os servos pararem de balancar
 
     // Inicia classe de processo de nuvens
     pc = new ProcessCloud();
@@ -340,7 +335,7 @@ int main(int argc, char **argv)
     // Subscribers dessincronizados para mensagens de laser, imagem e motores
     ros::Subscriber sub_laser = nh.subscribe("/livox/lidar"                    , 10, laserCallback);
     ros::Subscriber sub_cam   = nh.subscribe("/usb_cam/image_raw"              , 10, camCallback  );
-    ros::Subscriber sub_dyn   = nh.subscribe("/dynamixel_angulos_sincronizados",  1, dynCallback  );
+//    ros::Subscriber sub_dyn   = nh.subscribe("/dynamixel_angulos_sincronizados",  1, dynCallback  );
 
     ROS_INFO("Comecando a aquisicao ...");
 
