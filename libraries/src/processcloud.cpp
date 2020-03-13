@@ -5,10 +5,14 @@ ProcessCloud::ProcessCloud()
 {
     // Dimensoes da camera USB de entrada
     cam_w = 1024; cam_h = 768;
-    // Inicia matriz intrinseca da camera USB
-    K_cam << 1484.701399,    0.000000, float(cam_w)/2,//432.741036,
-                0.000000, 1477.059238, float(cam_h)/2,//412.362072,
-                0.000000,    0.000000,   1.000000;
+//    // Inicia matriz intrinseca da camera USB - Logitech antiga
+//    K_cam << 1484.701399,    0.000000, float(cam_w)/2,//432.741036,
+//                0.000000, 1477.059238, float(cam_h)/2,//412.362072,
+//                0.000000,    0.000000,   1.000000;
+    // Inicia matriz intrinseca da camera USB - Brio
+    K_cam << 2182.371971,    0.000000, 1980.026416,
+                0.000000, 2163.572854, 1095.636255,
+                0.000000,    0.000000,    1.000000;
     // Inicia nome da pasta -> criar pasta no Dados_B9 no DESKTOP!
     char* home;
     home = getenv("HOME");
@@ -324,10 +328,10 @@ void ProcessCloud::saveCloud(PointCloud<PointT>::Ptr nuvem, std::string nome){
 /////////////////////////////////////////////////////////////////////////////////////////////////
 void ProcessCloud::saveImage(cv::Mat img, string nome){
     std::string final = pasta + nome + ".png";
-//    vector<int> params;
-//    params.push_back(CV_IMWRITE_PNG_COMPRESSION);
-//    params.push_back(9);
-    cv::imwrite(final, img);//, params);
+    vector<int> params;
+    params.push_back(CV_IMWRITE_PNG_COMPRESSION);
+    params.push_back(9);
+    cv::imwrite(final, img, params);
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
 float ProcessCloud::normaldist(float x, float media, float dev){
@@ -518,15 +522,15 @@ void ProcessCloud::transformCloudServoAngles(PointCloud<PointT>::Ptr cloud, floa
     Eigen::Matrix3f rot = euler2matrix(0, -DEG2RAD(-tilt), -DEG2RAD(pan));
     T.block<3,3>(0, 0) = rot;
 
-    /// Calcular o novo centro de aquisicao (Walle desloca pois nao roda tilt sobre o eixo)  
-    float altura_eixo = 0.255; // [m]
-    // Coordenada Y
-    float y = -altura_eixo*cos(DEG2RAD(-tilt));
-    // Coordenadas X e Z
-    float x = altura_eixo*sin(DEG2RAD(-tilt))*sin(DEG2RAD(-pan));
-    float z = altura_eixo*sin(DEG2RAD(-tilt))*cos(DEG2RAD(-pan));
-    // Vetor de centro
-    C << x, y, z;
+//    /// Calcular o novo centro de aquisicao (Walle desloca pois nao roda tilt sobre o eixo)
+//    float altura_eixo = 0.255; // [m]
+//    // Coordenada Y
+//    float y = -altura_eixo*cos(DEG2RAD(-tilt));
+//    // Coordenadas X e Z
+//    float x = altura_eixo*sin(DEG2RAD(-tilt))*sin(DEG2RAD(-pan));
+//    float z = altura_eixo*sin(DEG2RAD(-tilt))*cos(DEG2RAD(-pan));
+//    // Vetor de centro
+//    C << x, y, z;
     T.block<3,1>(0, 3) = C;
     // Preenche a mensagem de odometria do robo para mostrar no RViz
     msg.pose.pose.position.x = C(0); msg.pose.pose.position.y = C(1); msg.pose.pose.position.z = C(2);

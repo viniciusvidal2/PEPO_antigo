@@ -6,9 +6,9 @@
 <include file="$(find livox_ros_driver)/launch/livox_lidar.launch"/>
 
 <!--Lancar os servos dynamixel-->
-<include file="$(find dynamixel_workbench_controllers)/launch/multi_port_B9.launch">
+<!--<include file="$(find dynamixel_workbench_controllers)/launch/multi_port_B9.launch">
     <arg name="pan_moving_speed" value="$(arg set_pan_moving_speed)"/>
-</include>
+</include>-->
 
 <!--Lancar no do driver camera USB - Lancar externo se tiver warning chato-->
 <include file="$(find usb_cam)/launch/usb_cam.launch"/>
@@ -17,7 +17,7 @@
 <!--<node name="processar_node" pkg="laser_camera" type="processar_node" output="screen"/>-->
 
 <!--Lancar processamento dos dados vindos de cada um de forma rapida, online-->
-<!--<node name="processar_online_node" pkg="laser_camera" type="processar_online_node" output="screen"/>-->
+<node name="processar_online_node" pkg="laser_camera" type="processar_online_node" output="screen"/>
 
 <!--Lancar scanner propriamente dito, online-->
 <!--<node name="scanner_aquisicao" pkg="laser_camera" type="scanner_aquisicao" output="screen"/>-->

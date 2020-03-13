@@ -13,15 +13,15 @@ OtimizaImagens::OtimizaImagens(string p, string icam, string iclu, string id):pa
     ed_clusters.create( im_clusters.size(), im_clusters.type() );
     ed_depth.create(    im_depth.size()   , im_depth.type()    );
     // Remove a distorcao da imagem da camera com os parametros da calibracao
-    params = (Mat_<double>(1,5) << 0.113092, -0.577590, 0.005000, -0.008206, 0.000000);
+//    params = (Mat_<double>(1,5) << 0.113092, -0.577590, 0.005000, -0.008206, 0.000000);
     K      = (Mat_<double>(3,3) << 1484.701399,    0.000000, im_cam.cols/2,
                                           0.000000, 1477.059238, im_cam.rows/2,
                                           0.000000,    0.000000,   1.000000);
-    Mat temp, temp_l;
-    undistort(im_cam,      temp  , K, params);
-    undistort(im_clusters, temp_l, K, params);
-    temp.copyTo(im_cam);
-    temp_l.copyTo(im_clusters);
+//    Mat temp, temp_l;
+//    undistort(im_cam,      temp  , K, params);
+//    undistort(im_clusters, temp_l, K, params);
+//    temp.copyTo(im_cam);
+//    temp_l.copyTo(im_clusters);
     // Salva os focos iniciais do laser para otimizacao da projecao
     fx_l = K.at<double>(Point(0, 0)); fy_l = K.at<double>(Point(1, 1));
 //    vector<Mat> planos;

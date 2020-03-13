@@ -125,7 +125,8 @@ void laserCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
             // Colorir pontos com calibracao default para visualizacao rapida
             ROS_WARN("Colorindo nuvem para salvar com parametros default ...");
             PointCloud<PointT>::Ptr cloud_color_image (new PointCloud<PointT>());
-            pc->colorCloudWithCalibratedImage(cloud_color, cloud_color_image, image_ptr->image, 1496.701399, 1475.059238, 2, 9);
+            pc->colorCloudWithCalibratedImage(cloud_color, cloud_color_image, image_ptr->image, 2182.371971, 2163.57254, 2, 9); // Brio
+//            pc->colorCloudWithCalibratedImage(cloud_color, cloud_color_image, image_ptr->image, 1496.701399, 1475.059238, 2, 9); // Logitech antiga
             // Filtrando por voxels e outliers - essa vai para visualizacao
             ROS_WARN("Filtrando nuvem ...");
             PointCloud<PointT>::Ptr cloud_filter (new PointCloud<PointT>());
@@ -162,7 +163,8 @@ void laserCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
 //            C << -rot_cam*T.block<3,1>(0, 3);
             cout << "\nCentro oficial:\n" <<  -C.transpose() << endl << endl;
             // Escreve a linha e armazena
-            linhas_nvm[indice_posicao] = pc->escreve_linha_imagem((1496.701399+1475.059238)/2, nome_imagem_atual, C, q);
+            linhas_nvm[indice_posicao] = pc->escreve_linha_imagem((2182.371971 + 2163.57254)/2, nome_imagem_atual, C, q); // Brio
+//            linhas_nvm[indice_posicao] = pc->escreve_linha_imagem((1496.701399+1475.059238)/2, nome_imagem_atual, C, q); // Logitech antiga
             //////////////////////
             // Somar a nuvem filtrada aqui na acumulada filtrada
             *acc_filt += *cloud_filter;
