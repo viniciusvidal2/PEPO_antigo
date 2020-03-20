@@ -79,6 +79,40 @@ nav_msgs::Odometry odom_msg;
 // Testando sincronizar subscribers por mutex
 Mutex m;
 
+/// Caminho controlado do comando total dos servos
+///
+void moveServoSteps(float pan0, float pan1, float tilt0, float tilt1){
+  ROS_INFO("Movendo servos para a proxima posicao de aquisicao ...");
+  float step = 15; // passo maximo de movimento [DEGREES]
+  // Iniciar comando de envio das coordenadas aos servos
+  servos60kg::Position cmd;
+  float ang_temp;
+  /// Por seguranca, enviar primeiro pan e depois tilt
+  step = (pan1 > pan0) ? step : -step;
+  ang_temp = pan0 + step;
+  while(ang_temp <= pan1){
+    cmd.request.pan  = ang_temp;
+    cmd.request.tilt = tilt0;
+    comando_servos.call(cmd);
+    ang_temp += step;
+    ang_temp = (ang_temp > pan1) ? pan1 : ang_temp;
+    sleep(1);
+  }
+  if(abs(tilt1 - tilt0) > 2){ // Aqui ha diferenca, temos mesmo que mudar de nivel em tilt tambem
+    step = (tilt1 > tilt0) ? step : -step;
+    ang_temp = tilt0 + step;
+    while(ang_temp <= tilt1){
+      cmd.request.pan  = pan1;
+      cmd.request.tilt = ang_temp;
+      comando_servos.call(cmd);
+      ang_temp += step;
+      ang_temp = (ang_temp > tilt1) ? tilt1 : ang_temp;
+      sleep(1);
+    }
+  }
+  ROS_INFO("Servos prontos, comecando nova aquisicao !");
+}
+
 /// Callback da camera
 ///
 void camCallback(const sensor_msgs::ImageConstPtr& msg){
@@ -151,7 +185,7 @@ void laserCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
             std::string nome_imagem_atual = "imagem_"+std::to_string(indice_posicao+1);
             pc->saveImage(image_ptr->image, nome_imagem_atual);
             pc->saveCloud(cloud_color_image, "p_"+std::to_string(indice_posicao+1));
-            pc->saveCloud(cloud_filter, "pf_"+std::to_string(indice_posicao+1));
+//            pc->saveCloud(cloud_filter, "pf_"+std::to_string(indice_posicao+1));
             /// Adcionar ao vetor a linha correspondente do NVM ///
             Eigen::Matrix4f T_ = T.inverse(); // Inverte para escrever a camera;
             // Calcula o quaternion correspondente
@@ -181,19 +215,12 @@ void laserCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
             servos60kg::Position cmd;
             if(indice_posicao + 1 < posicoes_pan.size()){
                 indice_posicao++; // Proximo ponto de observacao
-                cmd.request.pan  = posicoes_pan[indice_posicao];
-                cmd.request.tilt = posicoes_tilt[indice_posicao];
-                if(comando_servos.call(cmd) == 1)
-                    ROS_INFO("Indo para a posicao %d de %zu totais aquisitar nova nuvem", indice_posicao+1, posicoes_pan.size());
-                if(posicoes_tilt[indice_posicao] != posicoes_tilt[indice_posicao-1])
-                    sleep(2); // Seguranca para nao capturar nada balancando
-                sleep(6); // Precisa segurar porque nao conseguimos ainda ler o angulo
+                moveServoSteps(posicoes_pan[indice_posicao-1], posicoes_pan[indice_posicao], posicoes_tilt[indice_posicao-1], posicoes_tilt[indice_posicao]);
+                ROS_INFO("Chegou na posicao %d de %zu totais aquisitar nova nuvem", indice_posicao+1, posicoes_pan.size());
+                aquisitando = true;
             } else { // Se for a ultima, finalizar
-                // Voltando para o inicio
-                cmd.request.pan  = posicoes_pan[indice_posicao]; // Onde terminou e onde deve parar de uma vez
-                cmd.request.tilt = deg_min_tilt; // Vai deitar mesmo
-                if(comando_servos.call(cmd) == 1)
-                    ROS_INFO("Aquisitamos todas as nuvens, salvando tudo e indo para a posicao inicial ...");
+                // Voltando para o inicio, pelo menos em tilt
+                moveServoSteps(posicoes_pan[indice_posicao], posicoes_pan[indice_posicao], posicoes_tilt[indice_posicao], deg_min_tilt);
                 // Somando todas na acumulada cheia e salvando a acumulada
                 for(int i=0; i < parciais.size(); i++)
                     *acc += parciais[i];
@@ -213,27 +240,27 @@ void laserCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
 
 /// Subscriber dos servos
 ///
-void servosCallback(const geometry_msgs::TwistConstPtr& msg){
-    // As mensagens trazem angulos em unidade ja de DEGREES
-    float pan = msg->linear.x, tilt = msg->linear.y;
-    // Se estiver perto do valor de posicao atual de gravacao, liberar a aquisicao
-    if(abs(pan - posicoes_pan[indice_posicao]) <= dentro && abs(tilt - posicoes_tilt[indice_posicao]) <= dentro){
-        aquisitando = true;
-        posicoes_pan[indice_posicao] = pan; posicoes_tilt[indice_posicao] = tilt; // Para ficar mais preciso ainda na transformacao
-    } else {
-        aquisitando = false;
-        ROS_INFO("Aguardando proxima posicao de aquisicao ...");
-    }
-    // Se ja tiver no fim do processo, confere se esta chegando no inicio pra dai desligar os motores
-    if(fim_processo){
-        ROS_WARN("Estamos voltando ao inicio ...");
-        if(abs(pan - deg_min_pan) <= dentro && abs(tilt - deg_min_tilt) <= dentro){
-            ROS_WARN("Chegamos ao final, desligando ...");
-            system("gnome-terminal -x sh -c 'rosnode kill -a'");
-            ros::shutdown();
-        }
-    }
-}
+//void servosCallback(const geometry_msgs::TwistConstPtr& msg){
+//    // As mensagens trazem angulos em unidade ja de DEGREES
+//    float pan = msg->linear.x, tilt = msg->linear.y;
+//    // Se estiver perto do valor de posicao atual de gravacao, liberar a aquisicao
+//    if(abs(pan - posicoes_pan[indice_posicao]) <= dentro && abs(tilt - posicoes_tilt[indice_posicao]) <= dentro){
+//        aquisitando = true;
+//        posicoes_pan[indice_posicao] = pan; posicoes_tilt[indice_posicao] = tilt; // Para ficar mais preciso ainda na transformacao
+//    } else {
+//        aquisitando = false;
+//        ROS_INFO("Aguardando proxima posicao de aquisicao ...");
+//    }
+//    // Se ja tiver no fim do processo, confere se esta chegando no inicio pra dai desligar os motores
+//    if(fim_processo){
+//        ROS_WARN("Estamos voltando ao inicio ...");
+//        if(abs(pan - deg_min_pan) <= dentro && abs(tilt - deg_min_tilt) <= dentro){
+//            ROS_WARN("Chegamos ao final, desligando ...");
+//            system("gnome-terminal -x sh -c 'rosnode kill -a'");
+//            ros::shutdown();
+//        }
+//    }
+//}
 
 /// Main
 ///
@@ -250,7 +277,7 @@ int main(int argc, char **argv)
     system(("rm -r "+pasta).c_str());
     mkdir(pasta.c_str(), 0777);
 
-    sleep(3); // Esperar os motores ligarem e ficarem prontos
+    sleep(5); // Esperar os motores ligarem e ficarem prontos
     ros::Rate r(2);
 
     // Preenchendo os vetores de posicao a ser escaneadas
@@ -286,17 +313,11 @@ int main(int argc, char **argv)
     // Inicia servico para mexer os servos
     comando_servos = nh.serviceClient<servos60kg::Position>("/mover_servos");
 
-    // Enviando scanner para o inicio
-    servos60kg::Position cmd;
-    cmd.request.pan = 0;
-    cmd.request.tilt = 0;
-
-    while(!comando_servos.call(cmd)){
-        ROS_ERROR("Falha na comunicacao com os servos !! ...");
-        r.sleep();
-    }
+    // Enviando scanner para o inicio    
     ROS_INFO("Servos comunicando e indo para a posicao inicial ...");
-    sleep(10); // Esperar os servos pararem de balancar
+    moveServoSteps(posicoes_pan[posicoes_pan.size()-1], posicoes_pan[0], posicoes_tilt[posicoes_tilt.size()-1], posicoes_tilt[0]);
+    sleep(5); // Esperar os servos pararem de balancar
+    aquisitando = true;
 
     // Inicia classe de processo de nuvens
     pc = new ProcessCloud();
@@ -305,14 +326,14 @@ int main(int argc, char **argv)
     cloud_pub = nh.advertise<sensor_msgs::PointCloud2>("/B9/acc_filt", 100);
 
     // Publisher para odometria atual do robo
-    odom_pub  = nh.advertise<nav_msgs::Odometry>("B9/odom", 100);
+    odom_pub = nh.advertise<nav_msgs::Odometry>("B9/odom", 100);
     odom_msg.header.frame_id = "B9";
     odom_msg.child_frame_id  = "B9";
 
     // Subscribers dessincronizados para mensagens de laser, imagem e motores
     ros::Subscriber sub_laser  = nh.subscribe("/livox/lidar"      , 10, laserCallback );
     ros::Subscriber sub_cam    = nh.subscribe("/usb_cam/image_raw", 10, camCallback   );
-    ros::Subscriber sub_servos = nh.subscribe("/servos60kg/estado",  1, servosCallback);
+//    ros::Subscriber sub_servos = nh.subscribe("/servos60kg/estado",  1, servosCallback);
 
     ROS_INFO("Comecando a aquisicao ...");
 

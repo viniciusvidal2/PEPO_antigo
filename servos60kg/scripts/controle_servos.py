@@ -16,7 +16,7 @@ tilt_atual = 0
 # Entidade de comando para os servos
 kit = ServoKit(channels=16) # Indice 0 para pan, indice 1 para tilt
 
-def callback(comando):
+def callbackServos(comando):
     # Variaveis globais
     global kit
     global pan_atual
@@ -49,7 +49,7 @@ def controle():
     pca.frequency = pwm_freq
 
     # Servidor para o servico desejado
-    s = rospy.Service('/mover_servos', Position, callback)
+    s = rospy.Service('/mover_servos', Position, callbackServos)
 
     # Publisher para as mensagens do estado dos servos
     pub = rospy.Publisher('/servos60kg/estado', Twist, queue_size=10)
