@@ -612,9 +612,9 @@ float OtimizaImagens::FOB(Mat rgb, Mat clu){
             }
         }
     }
-//    imshow("clu", clugray);
-//    imshow("rgb", rgbgray);
-//    waitKey(0);
+    imshow("clu", clugray);
+    imshow("rgb", rgbgray);
+    waitKey(0);
 //    cvDestroyAllWindows();
 
     return fob;

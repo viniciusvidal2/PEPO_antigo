@@ -42,6 +42,8 @@ int main(int argc, char **argv)
     char* home;
     home = getenv("HOME");
 
+    pcl::console::setVerbosityLevel(pcl::console::L_ALWAYS);
+
     // Inicia classes de funcoes para imagens, otimizacao e nuvem
     ROS_INFO("Carregando dados para processar ...");
     ProcessCloud pc;

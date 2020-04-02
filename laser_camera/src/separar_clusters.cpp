@@ -66,7 +66,7 @@ int main(int argc, char **argv)
     ROS_INFO("Carregando a nuvem de pontos ...");
     char* home;
     home = getenv("HOME");
-    loadPLYFile<PointTN>(std::string(home)+"/Desktop/Dados_B9/acumulada_hd.ply", *inicial);
+    loadPLYFile<PointTN>(std::string(home)+"/Desktop/Dados_B9/nuvem_final.ply", *inicial);
 
     // Filtra por outliers
     struct stat buffer;
@@ -95,17 +95,17 @@ int main(int argc, char **argv)
     }
 
     // Projeta sobre imagem com parametros default para ajudar a separar clusters por cor
-//    ROS_INFO("Adicionando cor com parametros default ...");
-//    float fx = 1496.701399, fy = 1475.059238, tx = 2, ty = 9;
-//    Mat imagem = imread(std::string(home)+"/Desktop/Dados_B9/camera_rgb.png");
-//    PointCloud<PointTN>::Ptr temp_cor (new PointCloud<PointTN>);
-//    pc.colorCloudWithCalibratedImage(filtrada, temp_cor, imagem, fx, fy, tx, ty);
-//    *filtrada = *temp_cor;
+    ROS_INFO("Adicionando cor com parametros default ...");
+    float fx = 1496.701399, fy = 1475.059238, tx = 2, ty = 9;
+    Mat imagem = imread(std::string(home)+"/Desktop/Dados_B9/camera_rgb.png");
+    PointCloud<PointTN>::Ptr temp_cor (new PointCloud<PointTN>);
+    pc.colorCloudWithCalibratedImage(filtrada, temp_cor, imagem, fx, fy, tx, ty);
+    *filtrada = *temp_cor;
 
     // Extrai um vetor de planos e retorna nuvem sem eles
     ROS_INFO("Obtendo planos na nuvem ...");
     cl.obtainPlanes(filtrada, vetor_planos, filtrada_sem_planos);
-//    cl.separateClustersByDistance(vetor_planos);
+    cl.separateClustersByDistance(vetor_planos);
     cl.killSmallClusters(vetor_planos, 1);
     ROS_INFO("Foram obtidos %zu planos apos filtragem.", vetor_planos.size());
     vetor_planos_filt = vetor_planos;
@@ -117,7 +117,7 @@ int main(int argc, char **argv)
     // Extrai clusters da nuvem de pontos que restou
     ROS_INFO("Obtendo clusters para o restante da nuvem ...");
     cl.extractClustersRegionGrowingRGB(filtrada_sem_planos, vetor_clusters);
-//    cl.separateClustersByDistance(vetor_clusters);
+    cl.separateClustersByDistance(vetor_clusters);
     cl.killSmallClusters(vetor_clusters, 1);
     ROS_INFO("Foram obtidos %zu clusters apos filtragem.", vetor_clusters.size());
     vetor_clusters_filt = vetor_clusters;
