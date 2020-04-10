@@ -1,0 +1,10 @@
+syntax = "proto2";
+
+// Namespace para usar no Qt
+package NVMMsgProto;
+
+// Mensagem sobre os arquivos na pasta para o cliente esperar por eles na transmissao
+message NVM{
+    required int32 nlinhas = 1;
+    repeated string linhas = 2;
+}

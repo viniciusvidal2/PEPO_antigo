@@ -1,6 +1,8 @@
 #include <ros/ros.h>
 #include <dirent.h>
 #include <errno.h>
+#include <ostream>
+#include <istream>
 
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/Image.h>
@@ -17,6 +19,7 @@
 #include "../msgs/imagem.pb.h"
 #include "../msgs/nuvem.pb.h"
 #include "../msgs/arquivos.pb.h"
+#include "../msgs/nvm.pb.h"
 
 #include <zmq.hpp>
 #include <zmq_utils.h>
@@ -24,6 +27,7 @@
 using namespace ArquivosMsgProto;
 using namespace ImagemMsgProto;
 using namespace NuvemMsgProto;
+using namespace NVMMsgProto;
 using namespace pcl;
 using namespace pcl::io;
 using namespace cv;
@@ -97,8 +101,8 @@ int main(int argc, char **argv)
   arq.SerializeToString(&buffer_arq);
   ROS_INFO("Mensagem de cabecalho preparada para cliente ...");
 
-  vector<string> buffer_imagens(nomes_imagens.size()), buffer_nuvens(nomes_nuvens.size());
   // Para cada imagem
+  vector<string> buffer_imagens(nomes_imagens.size()), buffer_nuvens(nomes_nuvens.size());
   omp_set_dynamic(0);
   #pragma omp parallel for num_threads(buffer_imagens.size())
   for(size_t i=0; i < buffer_imagens.size(); i++){
@@ -162,11 +166,39 @@ int main(int argc, char **argv)
     ROS_INFO("Nuvem %zu de %zu lida e serializada ...", i+1, buffer_nuvens.size());
   }
 
+  // Ler arquivo nvm e formar mensagem correspondente
+  ifstream file; // Arquivo em si
+  NVM nvm_proto; // Mensagem compilada final
+  int conta_linhas = 0; // Quantas linhas ha no arquivo, menos as duas iniciais de cabecalho
+  string linha_atual; // Qual linha estamos para guardar na mensagem
+  file.open(root+"cameras.nvm");
+  if(file.is_open()){
+    // Para cada linha do arquivo, ler e adicionar a mensagem
+    while(getline(file, linha_atual)){
+      conta_linhas++;
+      // Se ja passamos o cabecalho, podemos ler e guardar
+      if(conta_linhas >= 3){
+        string *l = nvm_proto.add_linhas();
+        l->assign(linha_atual);
+      }
+    }
+    // Adiciona por redundancia o numero de linhas que o arquivo possuia
+    nvm_proto.set_nlinhas(nvm_proto.linhas_size());
+  } else {
+    ROS_ERROR("Nao foi achado arquivo NVM na pasta. Desligando ...");
+    ros::shutdown();
+  }
+
+  // Serializar arquivo como string para enviar
+  string buffer_nvm;
+  nvm_proto.SerializeToString(&buffer_nvm);
+  ROS_INFO("Arquivo NVM lido e serializado ...");
+
   /////////////////////////////////////////////
   /// Enviando as mensagens por ZMQ
   ///
 
-  cout << "\n\nENVIANDO DADOS POR ZMQ, PORTA 5558\n\n";
+  ROS_WARN("ENVIANDO DADOS POR ZMQ, PORTA 5558");
 
   // Criando contexto e socket do tipo PUSH, que a principio deveria esperar a outra ponta receber para enviar o proximo item
   ROS_INFO("Criando contexto e socket do publicador ...");
@@ -186,7 +218,7 @@ int main(int argc, char **argv)
     message_t img_zmq(buffer_imagens[i].length());
     memcpy(img_zmq.data(), buffer_imagens[i].data(), buffer_imagens[i].length());
     ROS_INFO("Enviando a mensagem %zu de %zu de imagem ...", i+1, buffer_imagens.size());
-    sender.send(arq_zmq);
+    sender.send(img_zmq);
     ROS_INFO("Mensagem %zu de imagem enviada.", i+1);
   }
 
@@ -195,14 +227,22 @@ int main(int argc, char **argv)
     message_t nuvem_zmq(buffer_nuvens[i].length());
     memcpy(nuvem_zmq.data(), buffer_nuvens[i].data(), buffer_nuvens[i].length());
     ROS_INFO("Enviando a mensagem %zu de %zu de nuvem ...", i+1, buffer_nuvens.size());
-    sender.send(arq_zmq);
+    sender.send(nuvem_zmq);
     ROS_INFO("Mensagem %zu de nuvem enviada.", i+1);
   }
+
+  // Para o NVM
+  message_t nvm_zmq(buffer_nvm.length());
+  memcpy(nvm_zmq.data(), buffer_nvm.data(), buffer_nvm.length());
+  ROS_INFO("Enviando arquivo NVM ...");
+  sender.send(nvm_zmq);
+  ROS_INFO("Arquivo NVM enviado.");
 
   // Finalizando porta
   ROS_INFO("Tudo foi enviado. Terminando porta de comunicacao ZMQ.");
   sender.close();
-  ctx.close();
+//  ctx.close();
 
+  ros::spinOnce();
   return 0;
 }

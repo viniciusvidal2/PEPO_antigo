@@ -36,9 +36,14 @@ catkin_package(
   DEPENDS roscpp cv_bridge sensor_msgs std_msgs image_transport pcl_ros image_geometry
 )
 
-add_library(protos msgs/imagem.pb.cc msgs/nuvem.pb.cc msgs/arquivos.pb.cc)
+add_library(protos msgs/imagem.pb.cc msgs/nuvem.pb.cc msgs/arquivos.pb.cc msgs/nvm.pb.cc)
 
 add_executable(envia_dados_zmq src/envia_dados_zmq.cpp)
 target_compile_options(envia_dados_zmq PRIVATE ${OpenMP_FLAGS})
 add_dependencies(envia_dados_zmq ${catkin_EXPORTED_TARGETS})
 target_link_libraries(envia_dados_zmq ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS} ${PROTOBUF_LIBRARIES} protos ${ZeroMQ_LIBRARY} ${OpenMP_LIBS})
+
+add_executable(recebe_dados_zmq src/recebe_dados_zmq.cpp)
+target_compile_options(recebe_dados_zmq PRIVATE ${OpenMP_FLAGS})
+add_dependencies(recebe_dados_zmq ${catkin_EXPORTED_TARGETS})
+target_link_libraries(recebe_dados_zmq ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS} ${PROTOBUF_LIBRARIES} protos ${ZeroMQ_LIBRARY} ${OpenMP_LIBS})
