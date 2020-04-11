@@ -122,10 +122,73 @@ int main(int argc, char **argv)
   ///
 
   // Para cada imagem
+  ROS_INFO("Convertendo e salvando as %d imagens agora ...", cabecalho_proto.imagens());
+  omp_set_dynamic(0);
+  #pragma omp parallel for num_threads(int(cabecalho_proto.imagens()/2))
+  for(int i=0; i < cabecalho_proto.imagens(); i++){
+    // Convertendo a imagem para protobuf
+    Imagem img_proto;
+    img_proto.ParseFromString(buffer_imagens[i]);
+    ROS_INFO("Convertendo a imagem %d de %d, com nome %s ...", i+1, cabecalho_proto.imagens(), img_proto.name().c_str());
+    // Criando a matriz de opencv
+    Mat im(img_proto.height(), img_proto.width(), CV_8UC3, Scalar(0, 0, 0));
+    // Escrever cada pixel no lugar certo
+#pragma omp parallel for
+    for(int p=0; p<img_proto.pixels_size(); p++){
+      // Pega cor do pixel
+      Vec3b cor;
+      cor[0] = img_proto.pixels(p).b(); cor[1] = img_proto.pixels(p).g(); cor[2] = img_proto.pixels(p).r();
+      // Pega posicao do pixel
+      int u = img_proto.pixels(p).u(), v = img_proto.pixels(p).v();
+      // Anota isso no lugar certo ali na imagem
+      im.at<Vec3b>(Point(u, v)) = cor;
+    }
+    // Salvar a imagem como nome especificado
+    imwrite(pasta+img_proto.name(), im);
+  }
 
   // Para cada nuvem
+  ROS_INFO("Convertendo e salvando as %d nuvens agora ...", cabecalho_proto.nuvens());
+  omp_set_dynamic(0);
+  #pragma omp parallel for num_threads(int(cabecalho_proto.nuvens()/2))
+  for(int i=0; i < cabecalho_proto.nuvens(); i++){
+    // Convertendo a nuvem para protobuf
+    Nuvem nuvem_proto;
+    nuvem_proto.ParseFromString(buffer_nuvens[i]);
+    ROS_INFO("Convertendo a nuvem %d de %d, com nome %s ...", i+1, cabecalho_proto.nuvens(), nuvem_proto.name().c_str());
+    // Criando a nuvem em pcl
+    PointCloud<PointT>::Ptr cloud (new PointCloud<PointT>);
+    cloud->resize(nuvem_proto.size());
+    // Escrever cada ponto no lugar certo
+#pragma omp parallel for
+    for(int p=0; p<nuvem_proto.size(); p++){
+      // Escreve o ponto como veio na mensagem
+      PointT ponto;
+      ponto.x = nuvem_proto.pontos(p).x(); ponto.y = nuvem_proto.pontos(p).y(); ponto.z = nuvem_proto.pontos(p).z();
+      ponto.r = nuvem_proto.pontos(p).r(); ponto.g = nuvem_proto.pontos(p).g(); ponto.b = nuvem_proto.pontos(p).b();
+      // Coloca no local na nuvem
+      cloud->points[p] = ponto;
+    }
+    // Salvar a nuvem na pasta com o nome especificado
+    savePLYFileASCII<PointT>(pasta+nuvem_proto.name(), *cloud);
+    cloud->clear();
+  }
 
   // Para o arquivo NVM
+  ROS_INFO("Escrevendo arquivo NVM ...");
+  NVM nvm_proto;
+  nvm_proto.ParseFromString(buffer_nvm);
+  ofstream file(pasta+nvm_proto.name());
+  if(file.is_open()){
+    // Escrever cabecalho
+    file << "NVM_V3\n\n";
+    // Para cada linha na mensagem, escrever no arquivo de saida
+    for(int i=0; i<nvm_proto.nlinhas(); i++)
+      file << nvm_proto.linhas(i)+"\n";
+  }
+  file.close();
+
+  ROS_INFO("Tudo recebido, processo concluido.");
 
   ros::spinOnce();
   return 0;

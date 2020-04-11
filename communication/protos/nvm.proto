@@ -5,6 +5,7 @@ package NVMMsgProto;
 
 // Mensagem sobre os arquivos na pasta para o cliente esperar por eles na transmissao
 message NVM{
-    required int32 nlinhas = 1;
-    repeated string linhas = 2;
+    required string name = 1;
+    required int32 nlinhas = 2;
+    repeated string linhas = 3;
 }

@@ -80,7 +80,7 @@ Eigen::VectorXf bat(float fx, float fy, float tx, float ty,
     ROS_INFO("Iniciando bats e respectivas fobs ...");
     ros::Time ini = ros::Time::now();
     Eigen::MatrixXf bats(nbats, rest.cols());
-    bats = Eigen::MatrixXf::Random(nbats, bats.cols());; // Linha de cada morcego com cada parametro em uma coluna
+    bats = Eigen::MatrixXf::Random(nbats, bats.cols()); // Linha de cada morcego com cada parametro em uma coluna
     omp_set_dynamic(0);
     #pragma omp parallel for num_threads(bats.rows())
     for(int i=0; i<bats.rows(); i++){

@@ -90,17 +90,29 @@ class NVM : public ::google::protobuf::Message {
 
   // accessors -------------------------------------------------------
 
-  // required int32 nlinhas = 1;
+  // required string name = 1;
+  inline bool has_name() const;
+  inline void clear_name();
+  static const int kNameFieldNumber = 1;
+  inline const ::std::string& name() const;
+  inline void set_name(const ::std::string& value);
+  inline void set_name(const char* value);
+  inline void set_name(const char* value, size_t size);
+  inline ::std::string* mutable_name();
+  inline ::std::string* release_name();
+  inline void set_allocated_name(::std::string* name);
+
+  // required int32 nlinhas = 2;
   inline bool has_nlinhas() const;
   inline void clear_nlinhas();
-  static const int kNlinhasFieldNumber = 1;
+  static const int kNlinhasFieldNumber = 2;
   inline ::google::protobuf::int32 nlinhas() const;
   inline void set_nlinhas(::google::protobuf::int32 value);
 
-  // repeated string linhas = 2;
+  // repeated string linhas = 3;
   inline int linhas_size() const;
   inline void clear_linhas();
-  static const int kLinhasFieldNumber = 2;
+  static const int kLinhasFieldNumber = 3;
   inline const ::std::string& linhas(int index) const;
   inline ::std::string* mutable_linhas(int index);
   inline void set_linhas(int index, const ::std::string& value);
@@ -115,6 +127,8 @@ class NVM : public ::google::protobuf::Message {
 
   // @@protoc_insertion_point(class_scope:NVMMsgProto.NVM)
  private:
+  inline void set_has_name();
+  inline void clear_has_name();
   inline void set_has_nlinhas();
   inline void clear_has_nlinhas();
 
@@ -122,6 +136,7 @@ class NVM : public ::google::protobuf::Message {
 
   ::google::protobuf::uint32 _has_bits_[1];
   mutable int _cached_size_;
+  ::std::string* name_;
   ::google::protobuf::RepeatedPtrField< ::std::string> linhas_;
   ::google::protobuf::int32 nlinhas_;
   friend void  protobuf_AddDesc_nvm_2eproto();
@@ -138,15 +153,91 @@ class NVM : public ::google::protobuf::Message {
 
 // NVM
 
-// required int32 nlinhas = 1;
-inline bool NVM::has_nlinhas() const {
+// required string name = 1;
+inline bool NVM::has_name() const {
   return (_has_bits_[0] & 0x00000001u) != 0;
 }
-inline void NVM::set_has_nlinhas() {
+inline void NVM::set_has_name() {
   _has_bits_[0] |= 0x00000001u;
 }
-inline void NVM::clear_has_nlinhas() {
+inline void NVM::clear_has_name() {
   _has_bits_[0] &= ~0x00000001u;
+}
+inline void NVM::clear_name() {
+  if (name_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    name_->clear();
+  }
+  clear_has_name();
+}
+inline const ::std::string& NVM::name() const {
+  // @@protoc_insertion_point(field_get:NVMMsgProto.NVM.name)
+  return *name_;
+}
+inline void NVM::set_name(const ::std::string& value) {
+  set_has_name();
+  if (name_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    name_ = new ::std::string;
+  }
+  name_->assign(value);
+  // @@protoc_insertion_point(field_set:NVMMsgProto.NVM.name)
+}
+inline void NVM::set_name(const char* value) {
+  set_has_name();
+  if (name_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    name_ = new ::std::string;
+  }
+  name_->assign(value);
+  // @@protoc_insertion_point(field_set_char:NVMMsgProto.NVM.name)
+}
+inline void NVM::set_name(const char* value, size_t size) {
+  set_has_name();
+  if (name_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    name_ = new ::std::string;
+  }
+  name_->assign(reinterpret_cast<const char*>(value), size);
+  // @@protoc_insertion_point(field_set_pointer:NVMMsgProto.NVM.name)
+}
+inline ::std::string* NVM::mutable_name() {
+  set_has_name();
+  if (name_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    name_ = new ::std::string;
+  }
+  // @@protoc_insertion_point(field_mutable:NVMMsgProto.NVM.name)
+  return name_;
+}
+inline ::std::string* NVM::release_name() {
+  clear_has_name();
+  if (name_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    return NULL;
+  } else {
+    ::std::string* temp = name_;
+    name_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+    return temp;
+  }
+}
+inline void NVM::set_allocated_name(::std::string* name) {
+  if (name_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    delete name_;
+  }
+  if (name) {
+    set_has_name();
+    name_ = name;
+  } else {
+    clear_has_name();
+    name_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+  }
+  // @@protoc_insertion_point(field_set_allocated:NVMMsgProto.NVM.name)
+}
+
+// required int32 nlinhas = 2;
+inline bool NVM::has_nlinhas() const {
+  return (_has_bits_[0] & 0x00000002u) != 0;
+}
+inline void NVM::set_has_nlinhas() {
+  _has_bits_[0] |= 0x00000002u;
+}
+inline void NVM::clear_has_nlinhas() {
+  _has_bits_[0] &= ~0x00000002u;
 }
 inline void NVM::clear_nlinhas() {
   nlinhas_ = 0;
@@ -162,7 +253,7 @@ inline void NVM::set_nlinhas(::google::protobuf::int32 value) {
   // @@protoc_insertion_point(field_set:NVMMsgProto.NVM.nlinhas)
 }
 
-// repeated string linhas = 2;
+// repeated string linhas = 3;
 inline int NVM::linhas_size() const {
   return linhas_.size();
 }

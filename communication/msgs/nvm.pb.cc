@@ -34,7 +34,8 @@ void protobuf_AssignDesc_nvm_2eproto() {
       "nvm.proto");
   GOOGLE_CHECK(file != NULL);
   NVM_descriptor_ = file->message_type(0);
-  static const int NVM_offsets_[2] = {
+  static const int NVM_offsets_[3] = {
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(NVM, name_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(NVM, nlinhas_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(NVM, linhas_),
   };
@@ -79,8 +80,8 @@ void protobuf_AddDesc_nvm_2eproto() {
   GOOGLE_PROTOBUF_VERIFY_VERSION;
 
   ::google::protobuf::DescriptorPool::InternalAddGeneratedFile(
-    "\n\tnvm.proto\022\013NVMMsgProto\"&\n\003NVM\022\017\n\007nlinh"
-    "as\030\001 \002(\005\022\016\n\006linhas\030\002 \003(\t", 64);
+    "\n\tnvm.proto\022\013NVMMsgProto\"4\n\003NVM\022\014\n\004name\030"
+    "\001 \002(\t\022\017\n\007nlinhas\030\002 \002(\005\022\016\n\006linhas\030\003 \003(\t", 78);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "nvm.proto", &protobuf_RegisterTypes);
   NVM::default_instance_ = new NVM();
@@ -98,6 +99,7 @@ struct StaticDescriptorInitializer_nvm_2eproto {
 // ===================================================================
 
 #ifndef _MSC_VER
+const int NVM::kNameFieldNumber;
 const int NVM::kNlinhasFieldNumber;
 const int NVM::kLinhasFieldNumber;
 #endif  // !_MSC_VER
@@ -121,6 +123,7 @@ NVM::NVM(const NVM& from)
 void NVM::SharedCtor() {
   ::google::protobuf::internal::GetEmptyString();
   _cached_size_ = 0;
+  name_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
   nlinhas_ = 0;
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
 }
@@ -131,6 +134,9 @@ NVM::~NVM() {
 }
 
 void NVM::SharedDtor() {
+  if (name_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    delete name_;
+  }
   if (this != default_instance_) {
   }
 }
@@ -157,7 +163,14 @@ NVM* NVM::New() const {
 }
 
 void NVM::Clear() {
-  nlinhas_ = 0;
+  if (_has_bits_[0 / 32] & 3) {
+    if (has_name()) {
+      if (name_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+        name_->clear();
+      }
+    }
+    nlinhas_ = 0;
+  }
   linhas_.Clear();
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
   mutable_unknown_fields()->Clear();
@@ -173,9 +186,26 @@ bool NVM::MergePartialFromCodedStream(
     tag = p.first;
     if (!p.second) goto handle_unusual;
     switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
-      // required int32 nlinhas = 1;
+      // required string name = 1;
       case 1: {
-        if (tag == 8) {
+        if (tag == 10) {
+          DO_(::google::protobuf::internal::WireFormatLite::ReadString(
+                input, this->mutable_name()));
+          ::google::protobuf::internal::WireFormat::VerifyUTF8StringNamedField(
+            this->name().data(), this->name().length(),
+            ::google::protobuf::internal::WireFormat::PARSE,
+            "name");
+        } else {
+          goto handle_unusual;
+        }
+        if (input->ExpectTag(16)) goto parse_nlinhas;
+        break;
+      }
+
+      // required int32 nlinhas = 2;
+      case 2: {
+        if (tag == 16) {
+         parse_nlinhas:
           DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
                    ::google::protobuf::int32, ::google::protobuf::internal::WireFormatLite::TYPE_INT32>(
                  input, &nlinhas_)));
@@ -183,13 +213,13 @@ bool NVM::MergePartialFromCodedStream(
         } else {
           goto handle_unusual;
         }
-        if (input->ExpectTag(18)) goto parse_linhas;
+        if (input->ExpectTag(26)) goto parse_linhas;
         break;
       }
 
-      // repeated string linhas = 2;
-      case 2: {
-        if (tag == 18) {
+      // repeated string linhas = 3;
+      case 3: {
+        if (tag == 26) {
          parse_linhas:
           DO_(::google::protobuf::internal::WireFormatLite::ReadString(
                 input, this->add_linhas()));
@@ -201,7 +231,7 @@ bool NVM::MergePartialFromCodedStream(
         } else {
           goto handle_unusual;
         }
-        if (input->ExpectTag(18)) goto parse_linhas;
+        if (input->ExpectTag(26)) goto parse_linhas;
         if (input->ExpectAtEnd()) goto success;
         break;
       }
@@ -231,19 +261,29 @@ failure:
 void NVM::SerializeWithCachedSizes(
     ::google::protobuf::io::CodedOutputStream* output) const {
   // @@protoc_insertion_point(serialize_start:NVMMsgProto.NVM)
-  // required int32 nlinhas = 1;
-  if (has_nlinhas()) {
-    ::google::protobuf::internal::WireFormatLite::WriteInt32(1, this->nlinhas(), output);
+  // required string name = 1;
+  if (has_name()) {
+    ::google::protobuf::internal::WireFormat::VerifyUTF8StringNamedField(
+      this->name().data(), this->name().length(),
+      ::google::protobuf::internal::WireFormat::SERIALIZE,
+      "name");
+    ::google::protobuf::internal::WireFormatLite::WriteStringMaybeAliased(
+      1, this->name(), output);
   }
 
-  // repeated string linhas = 2;
+  // required int32 nlinhas = 2;
+  if (has_nlinhas()) {
+    ::google::protobuf::internal::WireFormatLite::WriteInt32(2, this->nlinhas(), output);
+  }
+
+  // repeated string linhas = 3;
   for (int i = 0; i < this->linhas_size(); i++) {
   ::google::protobuf::internal::WireFormat::VerifyUTF8StringNamedField(
     this->linhas(i).data(), this->linhas(i).length(),
     ::google::protobuf::internal::WireFormat::SERIALIZE,
     "linhas");
     ::google::protobuf::internal::WireFormatLite::WriteString(
-      2, this->linhas(i), output);
+      3, this->linhas(i), output);
   }
 
   if (!unknown_fields().empty()) {
@@ -256,19 +296,30 @@ void NVM::SerializeWithCachedSizes(
 ::google::protobuf::uint8* NVM::SerializeWithCachedSizesToArray(
     ::google::protobuf::uint8* target) const {
   // @@protoc_insertion_point(serialize_to_array_start:NVMMsgProto.NVM)
-  // required int32 nlinhas = 1;
-  if (has_nlinhas()) {
-    target = ::google::protobuf::internal::WireFormatLite::WriteInt32ToArray(1, this->nlinhas(), target);
+  // required string name = 1;
+  if (has_name()) {
+    ::google::protobuf::internal::WireFormat::VerifyUTF8StringNamedField(
+      this->name().data(), this->name().length(),
+      ::google::protobuf::internal::WireFormat::SERIALIZE,
+      "name");
+    target =
+      ::google::protobuf::internal::WireFormatLite::WriteStringToArray(
+        1, this->name(), target);
   }
 
-  // repeated string linhas = 2;
+  // required int32 nlinhas = 2;
+  if (has_nlinhas()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteInt32ToArray(2, this->nlinhas(), target);
+  }
+
+  // repeated string linhas = 3;
   for (int i = 0; i < this->linhas_size(); i++) {
     ::google::protobuf::internal::WireFormat::VerifyUTF8StringNamedField(
       this->linhas(i).data(), this->linhas(i).length(),
       ::google::protobuf::internal::WireFormat::SERIALIZE,
       "linhas");
     target = ::google::protobuf::internal::WireFormatLite::
-      WriteStringToArray(2, this->linhas(i), target);
+      WriteStringToArray(3, this->linhas(i), target);
   }
 
   if (!unknown_fields().empty()) {
@@ -283,7 +334,14 @@ int NVM::ByteSize() const {
   int total_size = 0;
 
   if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
-    // required int32 nlinhas = 1;
+    // required string name = 1;
+    if (has_name()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::StringSize(
+          this->name());
+    }
+
+    // required int32 nlinhas = 2;
     if (has_nlinhas()) {
       total_size += 1 +
         ::google::protobuf::internal::WireFormatLite::Int32Size(
@@ -291,7 +349,7 @@ int NVM::ByteSize() const {
     }
 
   }
-  // repeated string linhas = 2;
+  // repeated string linhas = 3;
   total_size += 1 * this->linhas_size();
   for (int i = 0; i < this->linhas_size(); i++) {
     total_size += ::google::protobuf::internal::WireFormatLite::StringSize(
@@ -325,6 +383,9 @@ void NVM::MergeFrom(const NVM& from) {
   GOOGLE_CHECK_NE(&from, this);
   linhas_.MergeFrom(from.linhas_);
   if (from._has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    if (from.has_name()) {
+      set_name(from.name());
+    }
     if (from.has_nlinhas()) {
       set_nlinhas(from.nlinhas());
     }
@@ -345,13 +406,14 @@ void NVM::CopyFrom(const NVM& from) {
 }
 
 bool NVM::IsInitialized() const {
-  if ((_has_bits_[0] & 0x00000001) != 0x00000001) return false;
+  if ((_has_bits_[0] & 0x00000003) != 0x00000003) return false;
 
   return true;
 }
 
 void NVM::Swap(NVM* other) {
   if (other != this) {
+    std::swap(name_, other->name_);
     std::swap(nlinhas_, other->nlinhas_);
     linhas_.Swap(&other->linhas_);
     std::swap(_has_bits_[0], other->_has_bits_[0]);

@@ -169,9 +169,10 @@ int main(int argc, char **argv)
   // Ler arquivo nvm e formar mensagem correspondente
   ifstream file; // Arquivo em si
   NVM nvm_proto; // Mensagem compilada final
+  nvm_proto.set_name("cameras.nvm");
   int conta_linhas = 0; // Quantas linhas ha no arquivo, menos as duas iniciais de cabecalho
   string linha_atual; // Qual linha estamos para guardar na mensagem
-  file.open(root+"cameras.nvm");
+  file.open(root+nvm_proto.name());
   if(file.is_open()){
     // Para cada linha do arquivo, ler e adicionar a mensagem
     while(getline(file, linha_atual)){
