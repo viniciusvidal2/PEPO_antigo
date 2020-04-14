@@ -538,7 +538,6 @@ void ProcessCloud::transformCloudServoAngles(PointCloud<PointT>::Ptr cloud, floa
     msg.pose.pose.orientation.w = q.w(); msg.pose.pose.orientation.x = q.x();
     msg.pose.pose.orientation.y = q.y(); msg.pose.pose.orientation.z = q.z();
 
-    cout << "\n Centro:\n" << C.transpose() << endl;
     // Transforma a nuvem com a matriz de rotacao
     transformPointCloud(*cloud, *cloud, T);
 }

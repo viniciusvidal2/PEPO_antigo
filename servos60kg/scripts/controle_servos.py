@@ -4,6 +4,7 @@ import sys, time
 import numpy as np
 from math              import sqrt, pow, atan2
 from geometry_msgs.msg import Twist
+from std_msgs.msg      import Bool
 from servos60kg.srv    import Position
 from adafruit_servokit import ServoKit
 from board import SCL, SDA
@@ -26,9 +27,9 @@ def callbackServos(comando):
     rospy.loginfo("PAN: %.2f   TILT: %.2f", comando.pan, comando.tilt)
     # Realizar o que deve ser feito com as mensagens daqui pra frente
     kit.servo[0].angle = comando.pan/2
-    kit.servo[1].angle = comando.tilt/2
+    kit.servo[1].angle = comando.tilt
     pan_atual  = comando.pan/2
-    tilt_atual = comando.tilt/2
+    tilt_atual = comando.tilt
 
     return True
 
@@ -40,6 +41,13 @@ def controle():
 
     rospy.init_node('controle_servos', anonymous=False, disable_signals=False)
     rospy.loginfo("Iniciando no de controle dos servos ...")
+
+    # Publisher para falar que o driver do servo ja iniciou
+    pub_inicio = rospy.Publisher('/servos60kg/inicio', Bool, queue_size=10)
+    inicio = Bool()
+    
+    inicio.data = False
+    pub_inicio.publish(inicio)
 
     # Acertando a frequencia da porta
     pwm_freq = 30
@@ -53,6 +61,7 @@ def controle():
 
     # Publisher para as mensagens do estado dos servos
     pub = rospy.Publisher('/servos60kg/estado', Twist, queue_size=10)
+    
     # Mensagem
     pos = Twist()
 
@@ -60,6 +69,9 @@ def controle():
     rospy.loginfo("Rodando controle dos servos a %d Hz...", taxa)
     r = rospy.Rate(taxa)
     while not rospy.is_shutdown():
+        # Confirmar que estamos bem
+        inicio.data = True
+        pub_inicio.publish(inicio)
         # Mensagem alterada e publicada
         pos.linear.x = pan_atual
         pos.linear.y = tilt_atual

@@ -12,6 +12,7 @@
 #include <sensor_msgs/Image.h>
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/Twist.h>
+#include <std_msgs/Bool.h>
 
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/point_cloud.h>
@@ -78,39 +79,53 @@ ros::Publisher odom_pub;
 nav_msgs::Odometry odom_msg;
 // Testando sincronizar subscribers por mutex
 Mutex m;
+// Flag sobre o estado dos drivers dos servos
+bool drivers_iniciados = false;
 
 /// Caminho controlado do comando total dos servos
 ///
 void moveServoSteps(float pan0, float pan1, float tilt0, float tilt1){
-  ROS_INFO("Movendo servos para a proxima posicao de aquisicao ...");
-  float step = 15; // passo maximo de movimento [DEGREES]
+  float step_pan = 10, step_tilt = 10; // passo maximo de movimento [DEGREES]
   // Iniciar comando de envio das coordenadas aos servos
   servos60kg::Position cmd;
   float ang_temp;
   /// Por seguranca, enviar primeiro pan e depois tilt
-  step = (pan1 > pan0) ? step : -step;
-  ang_temp = pan0 + step;
-  while(ang_temp <= pan1){
+  step_pan = (pan1 > pan0) ? step_pan : -step_pan;
+  ang_temp = pan0 + step_pan;
+  while(abs(pan1 - ang_temp) > 1){
     cmd.request.pan  = ang_temp;
     cmd.request.tilt = tilt0;
     comando_servos.call(cmd);
-    ang_temp += step;
-    ang_temp = (ang_temp > pan1) ? pan1 : ang_temp;
+    ang_temp += step_pan;
+    if(pan1 > pan0)
+      ang_temp = (ang_temp > pan1) ? pan1 : ang_temp;
+    else
+      ang_temp = (ang_temp < pan1) ? pan1 : ang_temp;
     sleep(1);
   }
+  
   if(abs(tilt1 - tilt0) > 2){ // Aqui ha diferenca, temos mesmo que mudar de nivel em tilt tambem
-    step = (tilt1 > tilt0) ? step : -step;
-    ang_temp = tilt0 + step;
-    while(ang_temp <= tilt1){
+    step_tilt = (tilt1 > tilt0) ? step_tilt : -step_tilt;
+    ang_temp = tilt0 + step_tilt;
+    while(abs(tilt1 - ang_temp) > 1){
       cmd.request.pan  = pan1;
       cmd.request.tilt = ang_temp;
       comando_servos.call(cmd);
-      ang_temp += step;
-      ang_temp = (ang_temp > tilt1) ? tilt1 : ang_temp;
+      ang_temp += step_tilt;
+      if(tilt1 > tilt0)
+        ang_temp = (ang_temp > tilt1) ? tilt1 : ang_temp;
+      else
+        ang_temp = (ang_temp < tilt1) ? tilt1 : ang_temp;
       sleep(1);
     }
   }
-  ROS_INFO("Servos prontos, comecando nova aquisicao !");
+}
+
+/// Callback drivers do motor
+///
+void motCallback(const std_msgs::BoolConstPtr& msg){
+    // Sabemos aqui se os drivers dos servos ja foram iniciados no outro no e assim podemos iniciar todo o movimento
+    drivers_iniciados = msg->data;
 }
 
 /// Callback da camera
@@ -195,7 +210,6 @@ void laserCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
             // Calcula o centro
 //            Eigen::MatrixXf C(3, 1);
 //            C << -rot_cam*T.block<3,1>(0, 3);
-            cout << "\nCentro oficial:\n" <<  -C.transpose() << endl << endl;
             // Escreve a linha e armazena
             linhas_nvm[indice_posicao] = pc->escreve_linha_imagem((2182.371971 + 2163.57254)/2, nome_imagem_atual, C, q); // Brio
 //            linhas_nvm[indice_posicao] = pc->escreve_linha_imagem((1496.701399+1475.059238)/2, nome_imagem_atual, C, q); // Logitech antiga
@@ -215,11 +229,13 @@ void laserCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
             servos60kg::Position cmd;
             if(indice_posicao + 1 < posicoes_pan.size()){
                 indice_posicao++; // Proximo ponto de observacao
+                ROS_INFO("Movendo servos para a proxima posicao de aquisicao ...");
                 moveServoSteps(posicoes_pan[indice_posicao-1], posicoes_pan[indice_posicao], posicoes_tilt[indice_posicao-1], posicoes_tilt[indice_posicao]);
                 ROS_INFO("Chegou na posicao %d de %zu totais aquisitar nova nuvem", indice_posicao+1, posicoes_pan.size());
                 aquisitando = true;
             } else { // Se for a ultima, finalizar
                 // Voltando para o inicio, pelo menos em tilt
+                ROS_INFO("Movendo servos para a posicao final e finalizando ...");
                 moveServoSteps(posicoes_pan[indice_posicao], posicoes_pan[indice_posicao], posicoes_tilt[indice_posicao], deg_min_tilt);
                 // Somando todas na acumulada cheia e salvando a acumulada
                 for(int i=0; i < parciais.size(); i++)
@@ -237,30 +253,6 @@ void laserCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
         }
     }
 }
-
-/// Subscriber dos servos
-///
-//void servosCallback(const geometry_msgs::TwistConstPtr& msg){
-//    // As mensagens trazem angulos em unidade ja de DEGREES
-//    float pan = msg->linear.x, tilt = msg->linear.y;
-//    // Se estiver perto do valor de posicao atual de gravacao, liberar a aquisicao
-//    if(abs(pan - posicoes_pan[indice_posicao]) <= dentro && abs(tilt - posicoes_tilt[indice_posicao]) <= dentro){
-//        aquisitando = true;
-//        posicoes_pan[indice_posicao] = pan; posicoes_tilt[indice_posicao] = tilt; // Para ficar mais preciso ainda na transformacao
-//    } else {
-//        aquisitando = false;
-//        ROS_INFO("Aguardando proxima posicao de aquisicao ...");
-//    }
-//    // Se ja tiver no fim do processo, confere se esta chegando no inicio pra dai desligar os motores
-//    if(fim_processo){
-//        ROS_WARN("Estamos voltando ao inicio ...");
-//        if(abs(pan - deg_min_pan) <= dentro && abs(tilt - deg_min_tilt) <= dentro){
-//            ROS_WARN("Chegamos ao final, desligando ...");
-//            system("gnome-terminal -x sh -c 'rosnode kill -a'");
-//            ros::shutdown();
-//        }
-//    }
-//}
 
 /// Main
 ///
@@ -281,7 +273,7 @@ int main(int argc, char **argv)
     ros::Rate r(2);
 
     // Preenchendo os vetores de posicao a ser escaneadas
-    int step = 15; // [degrees]
+    int step = 30; // [degrees]
     vector<double> tilts = {deg_min_tilt, deg_hor_tilt, deg_max_tilt};
     int vistas = int(deg_max_pan - deg_min_pan)/step + 1; // Vistas na horizontal
     posicoes_pan.resize(vistas * tilts.size());
@@ -313,6 +305,15 @@ int main(int argc, char **argv)
     // Inicia servico para mexer os servos
     comando_servos = nh.serviceClient<servos60kg::Position>("/mover_servos");
 
+    // Subscriber para aguardar os drivers dos servos no outro no
+    ros::Subscriber sub_mot = nh.subscribe("/servos60kg/inicio", 10, motCallback);
+    ros::Rate rd(1);
+    while(!drivers_iniciados){
+         ROS_INFO("Aguardando drivers dos motores iniciarem ...");
+         ros::spinOnce();
+         rd.sleep();
+    }
+
     // Enviando scanner para o inicio    
     ROS_INFO("Servos comunicando e indo para a posicao inicial ...");
     moveServoSteps(posicoes_pan[posicoes_pan.size()-1], posicoes_pan[0], posicoes_tilt[posicoes_tilt.size()-1], posicoes_tilt[0]);
@@ -330,10 +331,9 @@ int main(int argc, char **argv)
     odom_msg.header.frame_id = "B9";
     odom_msg.child_frame_id  = "B9";
 
-    // Subscribers dessincronizados para mensagens de laser, imagem e motores
+    // Subscribers dessincronizados para mensagens de laser, imagem
     ros::Subscriber sub_laser  = nh.subscribe("/livox/lidar"      , 10, laserCallback );
     ros::Subscriber sub_cam    = nh.subscribe("/usb_cam/image_raw", 10, camCallback   );
-//    ros::Subscriber sub_servos = nh.subscribe("/servos60kg/estado",  1, servosCallback);
 
     ROS_INFO("Comecando a aquisicao ...");
 
