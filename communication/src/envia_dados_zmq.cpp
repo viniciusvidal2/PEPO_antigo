@@ -20,6 +20,7 @@
 #include "../msgs/nuvem.pb.h"
 #include "../msgs/arquivos.pb.h"
 #include "../msgs/nvm.pb.h"
+#include "google/protobuf/io/coded_stream.h"
 
 #include <zmq.hpp>
 #include <zmq_utils.h>
@@ -89,39 +90,65 @@ int main(int argc, char **argv)
   ROS_INFO("Transmitindo %zu imagens e %zu nuvens ...", nomes_imagens.size(), nomes_nuvens.size());
 
   /////////////////////////////////////////////
-  /// Secao de preparo de mensagens em protobuf
+  /// Iniciando objetos de protobuf e contexto
+  /// e socket ZMQ para enviar
   ///
 
-  // Mensagem de quantos arquivos irao, para o cliente ter nocao na recepcao
-  Arquivos arq;
-  arq.set_imagens(nomes_imagens.size());
-  arq.set_nuvens(nomes_nuvens.size());
+  // Entidades protobuf
+  Arquivos arq_proto;
+  Imagem img_proto;
+  Nuvem cloud_proto;
+  NVM nvm_proto;
+
+  // Criando contexto e socket do tipo PUSH, que a principio deveria esperar a outra ponta receber para enviar o proximo item
+  ROS_INFO("Criando contexto e socket do publicador ...");
+  context_t ctx{1};
+  socket_t sender(ctx, ZMQ_PUSH); // Tipo PUSH permite aguardar o recebedor para enviar o proximo dado
+  sender.bind("tcp://*:5558"); // Aqui se fez necessario o asterisco
+
+  /////////////////////////////////////////////
+  /// Trabalhando e enviando cabecalho
+  ///
+  arq_proto.set_imagens(nomes_imagens.size());
+  arq_proto.set_nuvens(nomes_nuvens.size());
   string buffer_arq;
   // Serializar para string a ser enviada
-  arq.SerializeToString(&buffer_arq);
+  arq_proto.SerializeToString(&buffer_arq);
   ROS_INFO("Mensagem de cabecalho preparada para cliente ...");
 
-  // Para cada imagem
-  vector<string> buffer_imagens(nomes_imagens.size()), buffer_nuvens(nomes_nuvens.size());
-  omp_set_dynamic(0);
-  #pragma omp parallel for num_threads(buffer_imagens.size())
-  for(size_t i=0; i < buffer_imagens.size(); i++){
+  // Criando mensagem ZMQ de cabecalho e enviando
+  message_t arq_zmq(buffer_arq.length());
+  memcpy(arq_zmq.data(), buffer_arq.data(), buffer_arq.length());
+  ROS_INFO("Enviando a mensagem de cabecalho ...");
+  sender.send(arq_zmq);
+  ROS_INFO("Mensagem de cabecalho enviada.");
+
+  // Liberando memoria
+  buffer_arq.clear();
+
+  /////////////////////////////////////////////
+  /// Trabalhando todas as imagens e enviando
+  ///
+
+  ROS_INFO("Comecando o envio de imagens ...");
+  Mat image;
+  string buffer_imagem;
+  for(int k=0; k < arq_proto.imagens(); k++){
     // Ler imagem da pasta na area de trabalho
-    string nome_imagem = nomes_imagens[i];
-    Mat image = imread(root+nome_imagem);
+    image = imread(root+nomes_imagens[k]);
     if(image.empty())
       ROS_ERROR("No image was found.");
 
     // Iniciar a mensagem protobuf de imagem com dados iniciais
-    Imagem img_proto;
     img_proto.set_height(image.rows);
     img_proto.set_width(image.cols);
-    img_proto.set_name(nome_imagem);
+    img_proto.set_name(nomes_imagens[k]);
 
     // Varrer os pixels da imagem e adicionar na mensagem esses dados
+    Vec3b cor;
     for(int i=0; i<img_proto.height(); i++){
       for(int j=0; j<img_proto.width(); j++){
-        Vec3b cor = image.at<Vec3b>(Point(j, i));
+        cor = image.at<Vec3b>(Point(j, i));
 
         Imagem::Pixel *pix = img_proto.add_pixels();
         pix->set_b(cor(0));
@@ -131,44 +158,72 @@ int main(int argc, char **argv)
         pix->set_v(i);
       }
     }
+    image.release();
 
     // Serializar em string para ser enviada e armazenar no vetor de buffer
-    img_proto.SerializeToString(&buffer_imagens[i]);
-    ROS_INFO("Imagem %zu de %zu lida e serializada ...", i+1, buffer_imagens.size());
+    img_proto.SerializeToString(&buffer_imagem);
+
+    // Copiando para mensagem ZMQ e enviando
+    message_t img_zmq(buffer_imagem.length());
+    memcpy(img_zmq.data(), buffer_imagem.data(), buffer_imagem.length());
+    ROS_INFO("Enviando a mensagem %d de %d de imagem ...", k+1, arq_proto.imagens());
+    sender.send(img_zmq);
+    ROS_INFO("Mensagem %d de imagem enviada.", k+1);
+
+    // Apagando dados para aliviar memoria
+    img_proto.Clear();
+    buffer_imagem.clear();
   }
 
-  // Para cada nuvem
-  omp_set_dynamic(0);
-  #pragma omp parallel for num_threads(buffer_nuvens.size())
-  for(size_t i=0; i < buffer_nuvens.size(); i++){
+  /////////////////////////////////////////////
+  /// Trabalhando e enviando todas as nuvens
+  ///
+
+  ROS_INFO("Comecando o envio de nuvens ...");
+  string buffer_nuvem;
+  for(int i=0; i < arq_proto.nuvens(); i++){
     // Ler nuvem da area de trabalho
-    string nome_nuvem = nomes_nuvens[i];
     PointCloud<PointT>::Ptr temp_cloud (new PointCloud<PointT>);
-    loadPLYFile<PointT>(root+nome_nuvem, *temp_cloud);
+    loadPLYFile<PointT>(root+nomes_nuvens[i], *temp_cloud);
 
     // Preparando mensagem para preencher com pontos da nuvem
-    Nuvem cloud_proto;
-    cloud_proto.set_name(nome_nuvem);
+    cloud_proto.set_name(nomes_nuvens[i]);
     cloud_proto.set_size(temp_cloud->size());
 
     // Preenchendo pontos na estrutura da mensagem
     PointT cloud_point;
-    for(size_t i=0; i<temp_cloud->size(); i++){
-      cloud_point = temp_cloud->points[i];
+    for(size_t k=0; k<temp_cloud->size(); k++){
+      cloud_point = temp_cloud->points[k];
 
       Nuvem::Ponto *p = cloud_proto.add_pontos();
       p->set_x(cloud_point.x); p->set_y(cloud_point.y); p->set_z(cloud_point.z);
       p->set_r(cloud_point.r); p->set_g(cloud_point.g); p->set_b(cloud_point.b);
     }
+    temp_cloud->clear();
 
     // Serializar em string para ser enviada
-    cloud_proto.SerializeToString(&buffer_nuvens[i]);
-    ROS_INFO("Nuvem %zu de %zu lida e serializada ...", i+1, buffer_nuvens.size());
+    cloud_proto.SerializeToString(&buffer_nuvem);
+
+    // Copiando para mensagem ZMQ e enviando
+    message_t nuvem_zmq(buffer_nuvem.length());
+    memcpy(nuvem_zmq.data(), buffer_nuvem.data(), buffer_nuvem.length());
+    ROS_INFO("Enviando a mensagem %d de %d de nuvem ...", i+1, arq_proto.nuvens());
+    sender.send(nuvem_zmq);
+    ROS_INFO("Mensagem %d de nuvem enviada.", i+1);
+
+    // Limpar memoria
+    cloud_proto.Clear();
+    buffer_nuvem.clear();
   }
 
+
+  /////////////////////////////////////////////
+  /// Trabalhando e enviando arquivo NVM
+  ///
+
+  ROS_INFO("Comecando envio de arquivo NVM ...");
   // Ler arquivo nvm e formar mensagem correspondente
   ifstream file; // Arquivo em si
-  NVM nvm_proto; // Mensagem compilada final
   nvm_proto.set_name("cameras.nvm");
   int conta_linhas = 0; // Quantas linhas ha no arquivo, menos as duas iniciais de cabecalho
   string linha_atual; // Qual linha estamos para guardar na mensagem
@@ -193,56 +248,24 @@ int main(int argc, char **argv)
   // Serializar arquivo como string para enviar
   string buffer_nvm;
   nvm_proto.SerializeToString(&buffer_nvm);
-  ROS_INFO("Arquivo NVM lido e serializado ...");
 
-  /////////////////////////////////////////////
-  /// Enviando as mensagens por ZMQ
-  ///
-
-  ROS_WARN("ENVIANDO DADOS POR ZMQ, PORTA 5558");
-
-  // Criando contexto e socket do tipo PUSH, que a principio deveria esperar a outra ponta receber para enviar o proximo item
-  ROS_INFO("Criando contexto e socket do publicador ...");
-  context_t ctx{1};
-  socket_t sender(ctx, ZMQ_PUSH); // Tipo PUSH permite aguardar o recebedor para enviar o proximo dado
-  sender.bind("tcp://*:5558"); // Aqui se fez necessario o asterisco
-
-  // Criando mensagem ZMQ de cabecalho e enviando
-  message_t arq_zmq(buffer_arq.length());
-  memcpy(arq_zmq.data(), buffer_arq.data(), buffer_arq.length());
-  ROS_INFO("Enviando a mensagem de cabecalho ...");
-  sender.send(arq_zmq);
-  ROS_INFO("Mensagem de cabecalho enviada.");
-
-  // Para cada mensagem de imagem
-  for(size_t i=0; i<buffer_imagens.size(); i++){
-    message_t img_zmq(buffer_imagens[i].length());
-    memcpy(img_zmq.data(), buffer_imagens[i].data(), buffer_imagens[i].length());
-    ROS_INFO("Enviando a mensagem %zu de %zu de imagem ...", i+1, buffer_imagens.size());
-    sender.send(img_zmq);
-    ROS_INFO("Mensagem %zu de imagem enviada.", i+1);
-  }
-
-  // Para cada mensagem de nuvem
-  for(size_t i=0; i<buffer_nuvens.size(); i++){
-    message_t nuvem_zmq(buffer_nuvens[i].length());
-    memcpy(nuvem_zmq.data(), buffer_nuvens[i].data(), buffer_nuvens[i].length());
-    ROS_INFO("Enviando a mensagem %zu de %zu de nuvem ...", i+1, buffer_nuvens.size());
-    sender.send(nuvem_zmq);
-    ROS_INFO("Mensagem %zu de nuvem enviada.", i+1);
-  }
-
-  // Para o NVM
+  // Enviando a mensagem em ZMQ
   message_t nvm_zmq(buffer_nvm.length());
   memcpy(nvm_zmq.data(), buffer_nvm.data(), buffer_nvm.length());
   ROS_INFO("Enviando arquivo NVM ...");
   sender.send(nvm_zmq);
   ROS_INFO("Arquivo NVM enviado.");
 
-  // Finalizando porta
-  ROS_INFO("Tudo foi enviado. Terminando porta de comunicacao ZMQ.");
+  // Liberando memoria
+  nvm_proto.Clear();
+  buffer_nvm.clear();
+
+  /////////////////////////////////////////////
+  /// Finalizando o socket e o programa
+  ///
+
+  ROS_INFO("Tudo foi enviado. Terminando porta de comunicacao ZMQ e processo.");
   sender.close();
-//  ctx.close();
 
   ros::spinOnce();
   return 0;

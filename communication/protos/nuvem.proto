@@ -1,20 +1,20 @@
-syntax = "proto2";
+syntax = "proto3";
 
 // Namespace para usar no Qt
 package NuvemMsgProto;
 
 // Mensagem da imagem total a ser enviada
 message Nuvem{
-        required string name = 1;
-        required int32 size = 2;
+        string name = 1;
+        int32 size = 2;
         // Mensagem de cada ponto com seu xyz_rgb
 	message Ponto{
-		required double x = 1;
-                required double y = 2;
-                required double z = 3;
-                required int32 r = 4;
-                required int32 g = 5;
-                required int32 b = 6;
+                double x = 1;
+                double y = 2;
+                double z = 3;
+                int32 r = 4;
+                int32 g = 5;
+                int32 b = 6;
 	}
         repeated Ponto pontos = 3;
 }

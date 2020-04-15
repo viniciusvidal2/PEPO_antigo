@@ -20,6 +20,8 @@
 #include "../msgs/nuvem.pb.h"
 #include "../msgs/arquivos.pb.h"
 #include "../msgs/nvm.pb.h"
+#include "google/protobuf/io/coded_stream.h"
+#include "google/protobuf/io/zero_copy_stream.h"
 
 #include <zmq.hpp>
 #include <zmq_utils.h>
@@ -115,16 +117,15 @@ int main(int argc, char **argv)
   // Finalizando o contexto ZMQ
   ROS_INFO("Tudo foi recebido. Processando mensagens ...");
   receiver.close();
-//  ctx.close();
 
   /////////////////////////////////////////////
   /// Converter mensagens protobuf em dados
   ///
 
   // Para cada imagem
-  ROS_INFO("Convertendo e salvando as %d imagens agora ...", cabecalho_proto.imagens());
+  ROS_INFO("Convertendo e salvando as %d imagens ...", cabecalho_proto.imagens());
   omp_set_dynamic(0);
-  #pragma omp parallel for num_threads(int(cabecalho_proto.imagens()/2))
+  #pragma omp parallel for num_threads(2)
   for(int i=0; i < cabecalho_proto.imagens(); i++){
     // Convertendo a imagem para protobuf
     Imagem img_proto;
