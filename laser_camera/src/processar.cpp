@@ -90,7 +90,7 @@ void laserCallback(const sensor_msgs::PointCloud2ConstPtr& msg)
         // Criar imagem projetando com mesma matriz da câmera
         ROS_WARN("Projetando sobre a imagem virtual do laser ...");
         pc->transformToCameraFrame(cloud_normals);
-        pc->createVirtualLaserImage(cloud_normals, "imagem_virtual");
+        pc->createVirtualLaserImage(cloud_normals, "imagem_virtual", image_ptr->image.rows, image_ptr->image.cols);
         // Salvar dados na pasta Dados_B9, no Desktop
         ROS_WARN("Salvando dados na pasta Dados_B9 ...");
         pc->saveImage(image_ptr->image, "camera_rgb");

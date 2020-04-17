@@ -60,13 +60,13 @@ int main(int argc, char **argv)
     ProcessCloud pc;
 
     // Define ambiente para ver o tratamento
-    int ambiente = 2; // 1 para interno, 2 para externo
+    int ambiente = 1; // 1 para interno, 2 para externo
 
     // Le nuvem de pontos
     ROS_INFO("Carregando a nuvem de pontos ...");
     char* home;
     home = getenv("HOME");
-    loadPLYFile<PointTN>(std::string(home)+"/Desktop/Dados_B9/nuvem_final.ply", *inicial);
+    loadPLYFile<PointTN>(std::string(home)+"/Desktop/Dados_B9/nuvem_online.ply", *inicial);
 
     // Filtra por outliers
     struct stat buffer;
@@ -96,7 +96,7 @@ int main(int argc, char **argv)
 
     // Projeta sobre imagem com parametros default para ajudar a separar clusters por cor
     ROS_INFO("Adicionando cor com parametros default ...");
-    float fx = 1496.701399, fy = 1475.059238, tx = 2, ty = 9;
+    float fx = 2182.371971, fy = 2163.57254, tx = 1, ty = 6;
     Mat imagem = imread(std::string(home)+"/Desktop/Dados_B9/camera_rgb.png");
     PointCloud<PointTN>::Ptr temp_cor (new PointCloud<PointTN>);
     pc.colorCloudWithCalibratedImage(filtrada, temp_cor, imagem, fx, fy, tx, ty);
@@ -185,7 +185,7 @@ int main(int argc, char **argv)
 
     // Projeta na imagem virtual a nuvem inteira
     ROS_INFO("Projetando imagem da camera virtual ...");
-    pc.createVirtualLaserImage(projetar, "imagem_clusters");
+    pc.createVirtualLaserImage(projetar, "imagem_clusters", imagem.cols, imagem.rows);
 
     ROS_INFO("Processo finalizado.");
 

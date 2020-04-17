@@ -4,10 +4,10 @@
 ProcessCloud::ProcessCloud()
 {
     // Dimensoes da camera USB de entrada
-    cam_w = 1024; cam_h = 768;
+    cam_w = 3840; cam_h = 2160;
     // Inicia matriz intrinseca da camera USB
-    K_cam << 1484.701399,    0.000000, float(cam_w)/2,//432.741036,
-                0.000000, 1477.059238, float(cam_h)/2,//412.362072,
+    K_cam << 2182.371971,    0.000000, float(cam_w)/2,//432.741036,
+                0.000000, 2163.572540, float(cam_h)/2,//412.362072,
                 0.000000,    0.000000,   1.000000;
     // Inicia nome da pasta -> criar pasta no Dados_B9 no DESKTOP!
     char* home;
@@ -128,9 +128,9 @@ void ProcessCloud::transformToCameraFrame(PointCloud<PointT>::Ptr nuvem){
     transformPointCloud(*nuvem, *nuvem, T);
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
-void ProcessCloud::createVirtualLaserImage(PointCloud<PointTN>::Ptr nuvem, string nome){
+void ProcessCloud::createVirtualLaserImage(PointCloud<PointTN>::Ptr nuvem, string nome, int w, int h){
     // Projetar os pontos na foto virtual e colorir imagem
-    Mat fl(Size(cam_w, cam_h), CV_8UC3, Scalar(0, 0, 0)); // Mesmas dimensoes que a camera tiver
+    Mat fl(Size(w, h), CV_8UC3, Scalar(0, 0, 0)); // Mesmas dimensoes que a camera tiver
     #pragma omp parallel for
     for(size_t i = 0; i < nuvem->size(); i++){
         /// Pegar ponto em coordenadas normais

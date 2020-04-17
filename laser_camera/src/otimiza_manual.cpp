@@ -72,7 +72,7 @@ int main(int argc, char **argv)
     float fob = 0;
 
     // Parametros para a funcao de projecao - intrinsecos da camera a principio
-    float fx = 1496.701399, fy = 1475.059238, tx = 2, ty = 9, passo = 5;
+    float fx = 2182.371971, fy = 2163.57254, tx = 2, ty = 9, passo = 5;
 //    float fx = 1484.701399, fy = 1477.059238, tx = 0, ty = 0, passo = 5;
 
     // Projeta a nuvem com a transformacao passada sobre camera virtual
