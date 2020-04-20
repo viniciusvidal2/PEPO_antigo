@@ -462,7 +462,7 @@ void ProcessCloud::compileFinalNVM(vector<string> linhas){
     nvm.close(); // Fechar para nao ter erro
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
-void ProcessCloud::applyPolinomialFilter(vector<PointCloud<PointTN>> &vetor_nuvens, int grau, double r){
+void ProcessCloud::applyPolynomialFilter(vector<PointCloud<PointTN>> &vetor_nuvens, int grau, double r){
     omp_set_dynamic(0);
     #pragma omp parallel for num_threads(vetor_nuvens.size())
     for(int i = 0; i < vetor_nuvens.size(); i++){

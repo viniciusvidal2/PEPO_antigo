@@ -112,7 +112,7 @@ int main(int argc, char **argv)
 
     // Aplicando polinomios sobre os planos
     ROS_INFO("Filtrando por polinomio os planos ...");
-    pc.applyPolinomialFilter(vetor_planos_filt, 3, 0.1);
+//    pc.applyPolynomialFilter(vetor_planos_filt, 3, 0.1);
 
     // Extrai clusters da nuvem de pontos que restou
     ROS_INFO("Obtendo clusters para o restante da nuvem ...");
@@ -124,7 +124,7 @@ int main(int argc, char **argv)
 
     // Aplicando polinomio sobre clusters
     ROS_INFO("Filtrando por polinomio os clusters ...");
-    pc.applyPolinomialFilter(vetor_clusters_filt, 5, 0.15);
+//    pc.applyPolynomialFilter(vetor_clusters_filt, 5, 0.15);
 
     // Definindo paleta de cores de cada plano e cluster
     cl.setColorPallete(vetor_planos.size() + vetor_clusters.size());

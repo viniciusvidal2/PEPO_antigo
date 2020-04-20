@@ -91,7 +91,7 @@ public:
   Mat projectCloudToLaserCenter(PointCloud<PointTN>::Ptr cloud, float fx, float fy, float tx, float ty, Size s);
   void colorCloudWithCalibratedImage(PointCloud<PointTN>::Ptr cloud_in, PointCloud<PointTN>::Ptr cloud_out, Mat image, float fx, float fy, float tx, float ty);
   void colorCloudWithCalibratedImage(PointCloud<PointT>::Ptr cloud_in, PointCloud<PointT>::Ptr cloud_out, Mat image, float fx, float fy, float tx, float ty);
-  void applyPolinomialFilter(vector<PointCloud<PointTN>> &vetor_nuvens, int grau, double r);
+  void applyPolynomialFilter(vector<PointCloud<PointTN>> &vetor_nuvens, int grau, double r);
 
   void writeNVM(std::string nome, std::string nome_imagem, Eigen::VectorXf params);
   void compileFinalNVM(vector<std::string> linhas);
