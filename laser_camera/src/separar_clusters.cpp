@@ -45,6 +45,7 @@ int main(int argc, char **argv)
     // Inicia no
     ros::init(argc, argv, "separar_clusters");
     ros::NodeHandle nh;
+    ros::NodeHandle n_("~");
 
     pcl::console::setVerbosityLevel(pcl::console::L_ALWAYS);
 
@@ -65,12 +66,15 @@ int main(int argc, char **argv)
     // Le nuvem de pontos
     ROS_INFO("Carregando a nuvem de pontos ...");
     char* home;
-    home = getenv("HOME");
-    loadPLYFile<PointTN>(std::string(home)+"/Desktop/Dados_B9/nuvem_online.ply", *inicial);
+    home = getenv("HOME");    
+    string nome_pasta;
+    n_.param("pasta", nome_pasta, string("Dados_PEPO1"));
+    nome_pasta = string(home)+"/Desktop/"+nome_pasta+"/";
+    loadPLYFile<PointTN>(nome_pasta+"acumulada_hd.ply", *inicial);
 
     // Filtra por outliers
     struct stat buffer;
-    std::string nuvem_covariancia_nome = std::string(home)+"/Desktop/Dados_B9/nuvem_filtrada_covariancia.ply";
+    std::string nuvem_covariancia_nome = nome_pasta + "nuvem_filtrada_covariancia.ply";
     if(stat(nuvem_covariancia_nome.c_str(), &buffer) && ambiente == 1){ // Se nao existe o arquivo, calcular somente para interno
         ROS_INFO("Filtrando por outliers ...");
         StatisticalOutlierRemoval<PointTN> sor;
@@ -84,7 +88,7 @@ int main(int argc, char **argv)
         pc.filterCloudDepthCovariance(filtrada, 50, 1.5);
 
         ROS_INFO("Salvando a nuvem filtrada por covariancia ...");
-        savePLYFileASCII<PointTN>(nuvem_covariancia_nome, *filtrada);
+        savePLYFileBinary<PointTN>(nuvem_covariancia_nome, *filtrada);
     } else if(ambiente == 1) { // Se o arquivo ja existe, carregar somente
         ROS_INFO("Carregando a nuvem filtrada por covariancia ...");
         loadPLYFile<PointTN>(nuvem_covariancia_nome, *filtrada);
@@ -95,12 +99,12 @@ int main(int argc, char **argv)
     }
 
     // Projeta sobre imagem com parametros default para ajudar a separar clusters por cor
-    ROS_INFO("Adicionando cor com parametros default ...");
-    float fx = 2182.371971, fy = 2163.57254, tx = 1, ty = 6;
-    Mat imagem = imread(std::string(home)+"/Desktop/Dados_B9/camera_rgb.png");
-    PointCloud<PointTN>::Ptr temp_cor (new PointCloud<PointTN>);
-    pc.colorCloudWithCalibratedImage(filtrada, temp_cor, imagem, fx, fy, tx, ty);
-    *filtrada = *temp_cor;
+//    ROS_INFO("Adicionando cor com parametros default ...");
+//    float fx = 1130, fy = 1130, tx = 2, ty = 4.8;
+//    Mat imagem = imread(std::string(home)+"/Desktop/Dados_B9/camera_rgb.png");
+//    PointCloud<PointTN>::Ptr temp_cor (new PointCloud<PointTN>);
+//    pc.colorCloudWithCalibratedImage(filtrada, temp_cor, imagem, fx, fy, tx, ty);
+//    *filtrada = *temp_cor;
 
     // Extrai um vetor de planos e retorna nuvem sem eles
     ROS_INFO("Obtendo planos na nuvem ...");
@@ -112,7 +116,7 @@ int main(int argc, char **argv)
 
     // Aplicando polinomios sobre os planos
     ROS_INFO("Filtrando por polinomio os planos ...");
-//    pc.applyPolynomialFilter(vetor_planos_filt, 3, 0.1);
+    pc.applyPolynomialFilter(vetor_planos_filt, 3, 0.1);
 
     // Extrai clusters da nuvem de pontos que restou
     ROS_INFO("Obtendo clusters para o restante da nuvem ...");
@@ -124,7 +128,7 @@ int main(int argc, char **argv)
 
     // Aplicando polinomio sobre clusters
     ROS_INFO("Filtrando por polinomio os clusters ...");
-//    pc.applyPolynomialFilter(vetor_clusters_filt, 5, 0.15);
+    pc.applyPolynomialFilter(vetor_clusters_filt, 5, 0.15);
 
     // Definindo paleta de cores de cada plano e cluster
     cl.setColorPallete(vetor_planos.size() + vetor_clusters.size());
@@ -169,23 +173,23 @@ int main(int argc, char **argv)
     }
 
     // Salva cada nuvem de clusters na pasta certa
-    std::string pasta_cluters = std::string(home)+"/Desktop/Dados_B9/Clusters";
+    string pasta_cluters = nome_pasta + "Clusters";
     system(("rm -r "+pasta_cluters).c_str());
     if(stat(pasta_cluters.c_str(), &buffer))
         mkdir(pasta_cluters.c_str(), 0777);
     for(size_t i=0; i < vetor_planos_filt.size()  ; i++)
-        savePLYFileASCII<PointTN>(pasta_cluters+"/p_"+std::to_string(i+1)+".ply", vetor_planos_filt[i]);
+        savePLYFileBinary<PointTN>(pasta_cluters+"/p_"+std::to_string(i+1)+".ply", vetor_planos_filt[i]);
     for(size_t i=0; i < vetor_clusters_filt.size(); i++)
-        savePLYFileASCII<PointTN>(pasta_cluters+"/o_"+std::to_string(i+1)+".ply", vetor_clusters_filt[i]);
+        savePLYFileBinary<PointTN>(pasta_cluters+"/o_"+std::to_string(i+1)+".ply", vetor_clusters_filt[i]);
 
     // Salva nuvem final
     ROS_INFO("Salvando nuvem final ...");
-    savePLYFileASCII<PointTN>(std::string(home)+"/Desktop/Dados_B9/nuvem_clusters_filtrada.ply", *final   );
-    savePLYFileASCII<PointTN>(std::string(home)+"/Desktop/Dados_B9/nuvem_clusters.ply"         , *projetar);
+    savePLYFileBinary<PointTN>(nome_pasta+"nuvem_clusters_filtrada.ply", *final   );
+    savePLYFileBinary<PointTN>(nome_pasta+"nuvem_clusters.ply"         , *projetar);
 
     // Projeta na imagem virtual a nuvem inteira
-    ROS_INFO("Projetando imagem da camera virtual ...");
-    pc.createVirtualLaserImage(projetar, "imagem_clusters", imagem.cols, imagem.rows);
+//    ROS_INFO("Projetando imagem da camera virtual ...");
+//    pc.createVirtualLaserImage(projetar, "imagem_clusters", imagem.cols, imagem.rows);
 
     ROS_INFO("Processo finalizado.");
 
