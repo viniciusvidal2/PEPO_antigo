@@ -62,6 +62,7 @@ int main(int argc, char **argv)
 
     // Define ambiente para ver o tratamento
     int ambiente = 1; // 1 para interno, 2 para externo
+    n_.param("ambiente", ambiente, 1);
 
     // Le nuvem de pontos
     ROS_INFO("Carregando a nuvem de pontos ...");
@@ -97,14 +98,7 @@ int main(int argc, char **argv)
         ROS_INFO("Ambiente externo, filtrando somente por outliers ...");
         *filtrada = *inicial;
     }
-
-    // Projeta sobre imagem com parametros default para ajudar a separar clusters por cor
-//    ROS_INFO("Adicionando cor com parametros default ...");
-//    float fx = 1130, fy = 1130, tx = 2, ty = 4.8;
-//    Mat imagem = imread(std::string(home)+"/Desktop/Dados_B9/camera_rgb.png");
-//    PointCloud<PointTN>::Ptr temp_cor (new PointCloud<PointTN>);
-//    pc.colorCloudWithCalibratedImage(filtrada, temp_cor, imagem, fx, fy, tx, ty);
-//    *filtrada = *temp_cor;
+    inicial->clear();
 
     // Extrai um vetor de planos e retorna nuvem sem eles
     ROS_INFO("Obtendo planos na nuvem ...");
@@ -113,6 +107,7 @@ int main(int argc, char **argv)
     cl.killSmallClusters(vetor_planos, 1);
     ROS_INFO("Foram obtidos %zu planos apos filtragem.", vetor_planos.size());
     vetor_planos_filt = vetor_planos;
+    filtrada->clear();
 
     // Aplicando polinomios sobre os planos
     ROS_INFO("Filtrando por polinomio os planos ...");
@@ -125,6 +120,7 @@ int main(int argc, char **argv)
     cl.killSmallClusters(vetor_clusters, 1);
     ROS_INFO("Foram obtidos %zu clusters apos filtragem.", vetor_clusters.size());
     vetor_clusters_filt = vetor_clusters;
+    filtrada_sem_planos->clear();
 
     // Aplicando polinomio sobre clusters
     ROS_INFO("Filtrando por polinomio os clusters ...");
@@ -187,9 +183,9 @@ int main(int argc, char **argv)
     savePLYFileBinary<PointTN>(nome_pasta+"nuvem_clusters_filtrada.ply", *final   );
     savePLYFileBinary<PointTN>(nome_pasta+"nuvem_clusters.ply"         , *projetar);
 
-    // Projeta na imagem virtual a nuvem inteira
-//    ROS_INFO("Projetando imagem da camera virtual ...");
-//    pc.createVirtualLaserImage(projetar, "imagem_clusters", imagem.cols, imagem.rows);
+    vetor_planos.clear(); vetor_planos_filt.clear();
+    vetor_clusters.clear(); vetor_clusters_filt.clear();
+    final->clear(); projetar->clear();
 
     ROS_INFO("Processo finalizado.");
 
