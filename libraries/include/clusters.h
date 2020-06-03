@@ -51,15 +51,15 @@ class Clusters
 public:
     Clusters();
     virtual ~Clusters();
-    void obtainPlanes(PointCloud<PointTN>::Ptr in, vector<PointCloud<PointTN>> &planos, PointCloud<PointTN>::Ptr out);
+    void obtainPlanes(PointCloud<PointT>::Ptr in, vector<PointCloud<PointT> > &planos, PointCloud<PointT>::Ptr out);
     void extractClustersRegionGrowing(PointCloud<PointTN>::Ptr in, vector<PointCloud<PointTN>> &clust);
-    void extractClustersRegionGrowingRGB(PointCloud<PointTN>::Ptr in, vector<PointCloud<PointTN>> &clust);
+    void extractClustersRegionGrowingRGB(PointCloud<PointT>::Ptr in, vector<PointCloud<PointT>> &clust);
     void extractClustersEuclidian(PointCloud<PointTN>::Ptr in, vector<PointCloud<PointTN>> &clust);
-    void separateClustersByDistance(vector<PointCloud<PointTN>> &clust);
+    void separateClustersByDistance(vector<PointCloud<PointT> > &clust);
     void setColorPallete(size_t l);
     void colorCloud(PointCloud<PointTN>::Ptr cloud, size_t i);
 //    void adjustSmallClusters(vector<PointCloud<PointTN>> &clusters);
-    void killSmallClusters(vector<PointCloud<PointTN>> &clusters, float pct_over_mean);
+    void killSmallClusters(vector<PointCloud<PointT>> &clusters, float pct_over_mean);
 
 private:    
     vector<int> pal_r, pal_g, pal_b;

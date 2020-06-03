@@ -67,6 +67,7 @@ using namespace std;
 using namespace pcl;
 using namespace pcl::io;
 using namespace cv;
+using namespace Eigen;
 
 typedef PointXYZRGB       PointT ;
 typedef PointXYZRGBNormal PointTN;
@@ -86,12 +87,12 @@ public:
   void saveCloud(PointCloud<PointTN>::Ptr nuvem, string nome);
   void saveCloud(PointCloud<PointT>::Ptr nuvem, string nome);
   void saveImage(cv::Mat img, std::string nome);
-  void filterCloudDepthCovariance(PointCloud<PointTN>::Ptr cloud, int kn, float thresh);
+  void filterCloudDepthCovariance(PointCloud<PointT>::Ptr cloud, int kn, float thresh);
 
   Mat projectCloudToLaserCenter(PointCloud<PointTN>::Ptr cloud, float fx, float fy, float tx, float ty, Size s);
-  void colorCloudWithCalibratedImage(PointCloud<PointTN>::Ptr cloud_in, PointCloud<PointTN>::Ptr cloud_out, Mat image, float fx, float fy, float tx, float ty);
-  void colorCloudWithCalibratedImage(PointCloud<PointT>::Ptr cloud_in, PointCloud<PointT>::Ptr cloud_out, Mat image, float fx, float fy, float tx, float ty);
-  void applyPolynomialFilter(vector<PointCloud<PointTN>> &vetor_nuvens, int grau, double r);
+  void colorCloudWithCalibratedImage(PointCloud<PointTN>::Ptr cloud_in, Mat image, float fx, float fy);
+  void colorCloudWithCalibratedImage(PointCloud<PointT>::Ptr cloud_in, Mat image, float fx, float fy);
+  void applyPolynomialFilter(vector<PointCloud<PointT>> vetor_nuvens_in, vector<PointCloud<PointTN>> &vetor_nuvens, int grau, double r);
 
   void writeNVM(std::string nome, std::string nome_imagem, Eigen::VectorXf params);
   void compileFinalNVM(vector<std::string> linhas);
