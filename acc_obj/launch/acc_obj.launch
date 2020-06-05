@@ -1,0 +1,8 @@
+<launch>
+<arg name="pasta" default="Dados_PEPO"/>
+
+<node name="acc_obj_node" pkg="acc_obj" type="acc_obj_node" output="screen">
+    <param name="pasta" value="$(arg pasta)"/>
+</node>
+
+</launch>

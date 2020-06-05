@@ -26,7 +26,7 @@ target_compile_options(acc_cloud_node PRIVATE ${OpenMP_FLAGS})
 add_dependencies(acc_cloud_node ${catkin_EXPORTED_TARGETS})
 target_link_libraries(acc_cloud_node ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS} ${OpenMP_LIBS})
 
-add_executable(acc_obj_node src/acc_obj.cpp ../libraries/src/clusters.cpp ../libraries/src/processcloud.cpp)
+add_executable(acc_obj_node src/acc_obj.cpp ../libraries/src/registerobjectoptm.cpp ../libraries/src/processcloud.cpp)
 target_compile_options(acc_obj_node PRIVATE ${OpenMP_FLAGS})
 add_dependencies(acc_obj_node ${catkin_EXPORTED_TARGETS})
 target_link_libraries(acc_obj_node ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS} ${OpenMP_LIBS})

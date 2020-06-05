@@ -215,7 +215,7 @@ void ProcessCloud::colorCloudWithCalibratedImage(PointCloud<PointT>::Ptr cloud_i
         X = P*X_;
         if(X(2, 0) > 0){
             X = X/X(2, 0);
-            // Adicionando ponto na imagem se for o caso de projetado corretamente
+            // Colorindo ponto se for o caso de projetado corretamente
             if(floor(X(0,0)) > 0 && floor(X(0,0)) < image.cols && floor(X(1,0)) > 0 && floor(X(1,0)) < image.rows){
                 cv::Vec3b cor = image.at<Vec3b>(Point(X(0,0), X(1,0)));
                 PointT point = cloud_in->points[i];
