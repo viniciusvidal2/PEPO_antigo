@@ -196,7 +196,7 @@ void RegisterObjectOptm::matchFeaturesAndFind3DPoints(Mat imref, Mat imnow, Poin
 
     // Se nao deu certo, avisar com enfase
     if(matches3d.size() < npontos3d)
-        ROS_ERROR("NAO ACHAMOS %d CORRESPONDENCIAS, MAS SIM %d", npontos3d, matches3d.size());
+        ROS_ERROR("NAO ACHAMOS %d CORRESPONDENCIAS, MAS SIM %zu", npontos3d, matches3d.size());
 
     // Plotando os dados para debugar
 //    this->plotDebug(imref, imnow, cref, cnow, goodimrefpts, goodimnowpts, matches3d);

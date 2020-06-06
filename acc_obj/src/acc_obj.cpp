@@ -71,7 +71,7 @@ int main(int argc, char **argv)
     n_.param("pasta", nome_param, string("Dados_PEPO"));
     char* home;
     home = getenv("HOME");
-    std::string pasta = std::string(home)+"/Desktop/"+nome_param+"/";
+    string pasta = string(home)+"/Desktop/"+nome_param+"/";
 
     // Se ja houver objeto salvo, deletar ele nesse ponto e comecar outro
     struct stat buffer;
@@ -108,12 +108,10 @@ int main(int argc, char **argv)
         ROS_INFO("Iniciando os dados de referencia ...");
         roo.readCloudAndPreProcess(pasta+nomes_nuvens[0], cref);
         imref = imread(pasta+nomes_imagens[0]);
-        cout << nomes_nuvens[0] << " " << nomes_imagens[0] << endl;
 
         // Projetar a nuvem na imagem de forma calibrada, otimizar a cor e salvar em nuvem de
         // pontos auxiliar os pixels correspondentes a cada ponto
         roo.projectCloudAndAnotatePixels(cref, imref, cpixref, f, t_off_lc);
-
         *cobj = *cref;
 
         Tref = Matrix4f::Identity();
@@ -140,7 +138,7 @@ int main(int argc, char **argv)
         // correspondentes a partir da nuvem auxiliar de pixels
         ROS_INFO("Match de features 2D e obtendo correspondencias em 3D ...");
         vector<Point2d> matches3Dindices;
-        roo.matchFeaturesAndFind3DPoints(imref, imnow, cpixref, cpixnow, 6, matches3Dindices);
+        roo.matchFeaturesAndFind3DPoints(imref, imnow, cpixref, cpixnow, 15, matches3Dindices);
         ROS_INFO("Foram obtidas %zu correspondencias 3D.", matches3Dindices.size());
 
         // Rodar a otimizacao da transformada por minimos quadrados das coordenadas desacopladas
@@ -167,7 +165,7 @@ int main(int argc, char **argv)
     }
 
     // Salvando a nuvem final do objeto
-    savePLYFileBinary(nome_objeto_final, *cobj);
+    savePLYFileBinary<PointTN>(nome_objeto_final, *cobj);
 
     ros::spinOnce();
     return 0;
