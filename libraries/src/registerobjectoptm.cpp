@@ -137,10 +137,23 @@ void RegisterObjectOptm::matchFeaturesAndFind3DPoints(Mat imref, Mat imnow, Poin
 
         for (size_t i = 0; i < matches.size(); i++){
             if (matches.at(i).size() >= 2){
-                if (matches.at(i).at(0).distance < 0.85*matches.at(i).at(1).distance)
+                if (matches.at(i).at(0).distance < 0.7*matches.at(i).at(1).distance)
                     good_matches.push_back(matches.at(i).at(0));
             }
         }
+        // Filtrando por distancia media entre os matches
+        vector<float> distances (good_matches.size());
+        for (int i=0; i < good_matches.size(); i++)
+            distances[i] = good_matches[i].distance;
+        float average = accumulate(distances.begin(), distances.end(), 0.0) / distances.size();
+        for(vector<DMatch>::iterator it = good_matches.begin(); it!=good_matches.end();){
+            if(it->distance > average)
+                good_matches.erase(it);
+            else
+                ++it;
+        }
+        // Filtrando por angulo das linhas entre os matches
+        this->filterMatchesLineCoeff(good_matches, kpref, kpnow, imref.cols, 1);
 
         tent += 1;
         min_hessian = 0.7*min_hessian;
@@ -196,10 +209,10 @@ void RegisterObjectOptm::matchFeaturesAndFind3DPoints(Mat imref, Mat imnow, Poin
 
     // Se nao deu certo, avisar com enfase
     if(matches3d.size() < npontos3d)
-        ROS_ERROR("NAO ACHAMOS %d CORRESPONDENCIAS, MAS SIM %d", npontos3d, matches3d.size());
+        ROS_ERROR("NAO ACHAMOS %d CORRESPONDENCIAS, MAS SIM %zu", npontos3d, matches3d.size());
 
     // Plotando os dados para debugar
-//    this->plotDebug(imref, imnow, cref, cnow, goodimrefpts, goodimnowpts, matches3d);
+    this->plotDebug(imref, imnow, cref, cnow, goodimrefpts, goodimnowpts, matches3d);
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
 Matrix4f RegisterObjectOptm::optmizeTransformLeastSquares(PointCloud<PointTN>::Ptr cref, PointCloud<PointTN>::Ptr cnow, vector<Point2d> matches3d){
@@ -234,8 +247,6 @@ Matrix4f RegisterObjectOptm::optmizeTransformLeastSquares(PointCloud<PointTN>::P
         // Inserindo resultado na matriz de transformacao final
         Tf.block<1,4>(s, 0) << Theta.transpose();
     }
-
-    cout << "\nMatriz homogenea: \n" << Tf << endl;
 
     // Retorna a transformacao otimizada
     return Tf;
@@ -287,8 +298,50 @@ void RegisterObjectOptm::plotDebug(Mat imref, Mat imnow, PointCloud<PointTN>::Pt
     savePLYFileBinary<PointTN>(pasta+"debugnow.ply", *cn);
     savePLYFileBinary<PointTN>(pasta+"debugreft.ply", *crt);
     savePLYFileBinary<PointTN>(pasta+"debugnowt.ply", *cnt);
-    imshow("ref", r);
-    imshow("now", n);
-    waitKey(0);
+}
+/////////////////////////////////////////////////////////////////////////////////////////////////
+Matrix4f RegisterObjectOptm::optmizeTransformSVD(PointCloud<PointTN>::Ptr cref, PointCloud<PointTN>::Ptr cnow, vector<Point2d> matches3d){
+    // Inicia estimador
+    registration::TransformationEstimationSVD<PointTN, PointTN> svd;
+    PointIndices pref, pnow;
+    Matrix4f Tsvd;
+    // Anota os indices vindos dos matches para os pontos correspondentes em cada nuvem
+    for(int i=0; i<matches3d.size(); i++){
+        pref.indices.push_back(matches3d[i].x);
+        pnow.indices.push_back(matches3d[i].y);
+    }
+    // Estima a transformacao
+    svd.estimateRigidTransformation(*cnow, pnow.indices, *cref, pref.indices, Tsvd);
+
+    return Tsvd;
+}
+/////////////////////////////////////////////////////////////////////////////////////////////////
+void RegisterObjectOptm::filterMatchesLineCoeff(vector<DMatch> &matches, vector<KeyPoint> kpref, vector<KeyPoint> kpnow, float width, float n){
+    // Fazer e calcular vetor de coeficientes para cada ponto correspondente do processo de match
+    vector<float> coefs(matches.size());
+#pragma omp parallel for
+    for(int i=0; i<matches.size(); i++){
+        float xr, yr, xn, yn;
+        xr = kpref[matches[i].queryIdx].pt.x;
+        yr = kpref[matches[i].queryIdx].pt.y;
+        xn = kpnow[matches[i].trainIdx].pt.x + width;
+        yn = kpnow[matches[i].trainIdx].pt.y;
+        // Calcular os coeficientes angulares
+        coefs[i] = (yn - yr)/(xn - xr);
+    }
+    // Media e desvio padrao dos coeficientes
+    float average = accumulate(coefs.begin(), coefs.end(), 0.0)/coefs.size();
+    float accum = 0.0;
+    for_each(coefs.begin(), coefs.end(), [&](const float d){
+        accum += (d - average) * (d - average);
+    });
+    float stdev = sqrt(accum/(coefs.size()-1));
+    // Filtrar o vetor de matches na posicao que os coeficientes estejam fora
+    vector<DMatch> temp;
+    for(int i=0; i<coefs.size(); i++){
+        if(abs(coefs[i]-average) < n*stdev)
+            temp.push_back(matches[i]);
+    }
+    matches = temp;
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////

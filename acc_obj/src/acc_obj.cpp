@@ -13,6 +13,7 @@
 #include <pcl/filters/conditional_removal.h>
 #include <pcl/filters/statistical_outlier_removal.h>
 #include <pcl/filters/passthrough.h>
+#include <pcl/filters/voxel_grid.h>
 
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -107,6 +108,8 @@ int main(int argc, char **argv)
     if(cref->empty()){
         ROS_INFO("Iniciando os dados de referencia ...");
         roo.readCloudAndPreProcess(pasta+nomes_nuvens[0], cref);
+        pc.calculateNormals(cref);
+        pc.filterCloudDepthCovariance(cref, 15, 1);
         imref = imread(pasta+nomes_imagens[0]);
 
         // Projetar a nuvem na imagem de forma calibrada, otimizar a cor e salvar em nuvem de
@@ -125,6 +128,8 @@ int main(int argc, char **argv)
         // Le dados, filtra e guarda na memoria
         ROS_INFO("Pre-processando nuvem %d ...", i+1);
         roo.readCloudAndPreProcess(pasta+nomes_nuvens[i], cnow);
+        pc.calculateNormals(cnow);
+        pc.filterCloudDepthCovariance(cnow, 15, 1);
         imnow = imread(pasta+nomes_imagens[i]);
 
         // Projetar nuvem e salvar nuvem auxiliar de pixels        
@@ -138,20 +143,20 @@ int main(int argc, char **argv)
         // correspondentes a partir da nuvem auxiliar de pixels
         ROS_INFO("Match de features 2D e obtendo correspondencias em 3D ...");
         vector<Point2d> matches3Dindices;
-        roo.matchFeaturesAndFind3DPoints(imref, imnow, cpixref, cpixnow, 15, matches3Dindices);
+        roo.matchFeaturesAndFind3DPoints(imref, imnow, cpixref, cpixnow, 6, matches3Dindices);
         ROS_INFO("Foram obtidas %zu correspondencias 3D.", matches3Dindices.size());
 
-        // Rodar a otimizacao da transformada por minimos quadrados das coordenadas desacopladas
-        ROS_INFO("Otimizando a transformacao relativa das nuvens por minimos quadrados ...");
-        Tnow = roo.optmizeTransformLeastSquares(cref, cnow, matches3Dindices);
+        // Rodar a otimizacao da transformada por SVD
+        ROS_INFO("Otimizando a transformacao relativa das nuvens por SVD ...");
+        Tnow = roo.optmizeTransformSVD(cref, cnow, matches3Dindices);
 
         // Transforma a nuvem atual com a transformacao encontrada
         transformPointCloudWithNormals<PointTN>(*cnow, *cnow, Tnow);
 
         // Refina a transformacao por ICP com poucas iteracoes
-//        ROS_INFO("Refinando registro por ICP ...");
-//        Matrix4f Ticp = roo.icp(cref, cnow, 100);
-//        Tnow = Tnow*Ticp;
+        ROS_INFO("Refinando registro por ICP ...");
+        Matrix4f Ticp = roo.icp(cref, cnow, 100);
+        Tnow = Tnow*Ticp;
 
         // Soma a nuvem transformada e poe no lugar certo
         ROS_INFO("Registrando nuvem atual no objeto final ...");
@@ -163,6 +168,13 @@ int main(int argc, char **argv)
         Tref = Tnow;
         imref = imnow;
     }
+
+    // Filtrando novamente objeto final
+    StatisticalOutlierRemoval<PointTN> sor;
+    sor.setMeanK(10);
+    sor.setStddevMulThresh(2);
+    sor.setInputCloud(cobj);
+    sor.filter(*cobj);
 
     // Salvando a nuvem final do objeto
     savePLYFileBinary<PointTN>(nome_objeto_final, *cobj);
