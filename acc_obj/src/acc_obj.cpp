@@ -4,6 +4,8 @@
 #include <math.h>
 #include <sys/stat.h>
 #include <ostream>
+#include <boost/filesystem.hpp>
+#include <iterator>
 
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/point_cloud.h>
@@ -31,6 +33,7 @@ using namespace pcl::io;
 using namespace Eigen;
 using namespace std;
 using namespace cv;
+using namespace boost::filesystem;
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 int getdir(string dir, vector<string> &imgs, vector<string> &nuvens){
@@ -50,6 +53,9 @@ int getdir(string dir, vector<string> &imgs, vector<string> &nuvens){
         if(nome_temp.substr(nome_temp.find_last_of(".")+1) == "ply")
             nuvens.push_back(nome_temp);
     }
+    sort(imgs.begin()  , imgs.end()  );
+    sort(nuvens.begin(), nuvens.end());
+
     closedir(dp);
 
     return 0;
@@ -100,7 +106,7 @@ int main(int argc, char **argv)
     // Pose da nuvem agora e na referencia
     Matrix4f Tnow, Tref;
     // Vetor de offset entre centro do laser e da camera - desenho solid, e foco
-    Vector3f t_off_lc(0.01, 0.0448, 0.023);
+    Vector3f t_off_lc(0.0, 0.0448, 0.023);
     float f = 1130;
 
     /// Inicia primeiro a nuvem referencia e outros dados com o primeiro dado lido
@@ -136,14 +142,11 @@ int main(int argc, char **argv)
         ROS_INFO("Projetando para otimizar cores e anotar os pixels ...");
         roo.projectCloudAndAnotatePixels(cnow, imnow, cpixnow, f, t_off_lc);
 
-//        // Transforma a nuvem para mais perto da nuvem de referencia com a transformacao de referencia
-//        transformPointCloudWithNormals<PointTN>(*cnow, *cnow, Tref);
-
         // Calcular features e matches e retornar os N melhores e seus pontos em 3D
         // correspondentes a partir da nuvem auxiliar de pixels
         ROS_INFO("Match de features 2D e obtendo correspondencias em 3D ...");
         vector<Point2d> matches3Dindices;
-        roo.matchFeaturesAndFind3DPoints(imref, imnow, cpixref, cpixnow, 6, matches3Dindices);
+        roo.matchFeaturesAndFind3DPoints(imref, imnow, cpixref, cpixnow, 100, matches3Dindices);
         ROS_INFO("Foram obtidas %zu correspondencias 3D.", matches3Dindices.size());
 
         // Rodar a otimizacao da transformada por SVD
@@ -155,29 +158,42 @@ int main(int argc, char **argv)
 
         // Refina a transformacao por ICP com poucas iteracoes
         ROS_INFO("Refinando registro por ICP ...");
-        Matrix4f Ticp = roo.icp(cref, cnow, 100);
-        Tnow = Tnow*Ticp;
+        Matrix4f Ticp = roo.icp(cref, cnow, 200);
+        Tnow = Ticp*Tnow;
 
         // Soma a nuvem transformada e poe no lugar certo
         ROS_INFO("Registrando nuvem atual no objeto final ...");
+        Matrix4f Tobj = Tnow*Tref*Tnow.inverse();
+        transformPointCloudWithNormals<PointTN>(*cnow, *cnow, Tobj);
         *cobj += *cnow;
 
+        // Filtrando novamente objeto final
+        ROS_INFO("Filtrando e salvando nuvem de objeto ...");
+        StatisticalOutlierRemoval<PointTN> sor;
+        sor.setMeanK(10);
+        sor.setStddevMulThresh(2);
+        sor.setInputCloud(cobj);
+        sor.filter(*cobj);
+
+        // Salvando a nuvem final do objeto
+        savePLYFileBinary<PointTN>(nome_objeto_final, *cobj);
+
         // Atualiza as referencias e parte para a proxima aquisicao
-        *cref = *cnow;
-        *cpixref = *cpixnow;
-        Tref = Tnow;
+        transformPointCloudWithNormals<PointTN>(*cnow, *cref, Tobj.inverse()); // Traz de volta para a origem a nuvem referencia
+        *cpixref = *cpixnow; // Nuvem de indices ja estareferenciado a origem
+        Tref = Tobj;
         imref = imnow;
     }
 
-    // Filtrando novamente objeto final
-    StatisticalOutlierRemoval<PointTN> sor;
-    sor.setMeanK(10);
-    sor.setStddevMulThresh(2);
-    sor.setInputCloud(cobj);
-    sor.filter(*cobj);
+//    // Filtrando novamente objeto final
+//    StatisticalOutlierRemoval<PointTN> sor;
+//    sor.setMeanK(10);
+//    sor.setStddevMulThresh(2);
+//    sor.setInputCloud(cobj);
+//    sor.filter(*cobj);
 
-    // Salvando a nuvem final do objeto
-    savePLYFileBinary<PointTN>(nome_objeto_final, *cobj);
+//    // Salvando a nuvem final do objeto
+//    savePLYFileBinary<PointTN>(nome_objeto_final, *cobj);
 
     ros::spinOnce();
     return 0;

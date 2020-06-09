@@ -16,7 +16,7 @@ void RegisterObjectOptm::readCloudAndPreProcess(string name, PointCloud<PointTN>
     loadPLYFile<PointTN>(name, *cloud);
     // Filtro de voxels para aliviar a entrada
     VoxelGrid<PointTN> voxel;
-    float lfsz = 0.03;
+    float lfsz = 0.02;
     voxel.setLeafSize(lfsz, lfsz, lfsz);
     // Filtro de profundidade para nao pegarmos muito fundo
     PassThrough<PointTN> pass;
@@ -92,9 +92,9 @@ Matrix4f RegisterObjectOptm::icp(PointCloud<PointTN>::Ptr ctgt, PointCloud<Point
     icp.setInputTarget(ctgt);
     icp.setInputSource(csrc);
     icp.setMaximumIterations(its); // Chute inicial bom 10-100
-    icp.setTransformationEpsilon(1*1e-10);
-    icp.setEuclideanFitnessEpsilon(1*1e-12);
-    icp.setMaxCorrespondenceDistance(0.3);
+    icp.setTransformationEpsilon(1*1e-8);
+    icp.setEuclideanFitnessEpsilon(1*1e-10);
+    icp.setMaxCorrespondenceDistance(0.05);
     // Alinhando
     PointCloud<PointTN> dummy;
     icp.align(dummy, Matrix4f::Identity());
@@ -124,7 +124,7 @@ void RegisterObjectOptm::matchFeaturesAndFind3DPoints(Mat imref, Mat imnow, Poin
     float min_hessian = 2000;
 
     /// Loop de busca por matches e pontos 3D correspondentes ///
-    while(tent < 30 && matches3d.size() <= npontos3d){
+    while(tent < 15 && matches3d.size() <= npontos3d){
         // Resetando vetores do algoritmo para buscarem novamente
         matches.clear(); good_matches.clear(); matches3d.clear();
         goodimnowpts.clear(); goodimrefpts.clear();
@@ -147,7 +147,7 @@ void RegisterObjectOptm::matchFeaturesAndFind3DPoints(Mat imref, Mat imnow, Poin
             distances[i] = good_matches[i].distance;
         float average = accumulate(distances.begin(), distances.end(), 0.0) / distances.size();
         for(vector<DMatch>::iterator it = good_matches.begin(); it!=good_matches.end();){
-            if(it->distance > average)
+            if(it->distance > 1.3*average)
                 good_matches.erase(it);
             else
                 ++it;
@@ -345,3 +345,18 @@ void RegisterObjectOptm::filterMatchesLineCoeff(vector<DMatch> &matches, vector<
     matches = temp;
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
+Matrix4f RegisterObjectOptm::optmizeTransformP2P(PointCloud<PointTN>::Ptr cref, PointCloud<PointTN>::Ptr cnow, vector<Point2d> matches3d){
+    // Inicia estimador
+    registration::TransformationEstimationPointToPlaneLLS<PointTN, PointTN, float> p2p;
+    PointIndices pref, pnow;
+    Matrix4f Tp2p;
+    // Anota os indices vindos dos matches para os pontos correspondentes em cada nuvem
+    for(int i=0; i<matches3d.size(); i++){
+        pref.indices.push_back(matches3d[i].x);
+        pnow.indices.push_back(matches3d[i].y);
+    }
+    // Estima a transformacao
+    p2p.estimateRigidTransformation(*cnow, pnow.indices, *cref, pref.indices, Tp2p);
+
+    return Tp2p;
+}
