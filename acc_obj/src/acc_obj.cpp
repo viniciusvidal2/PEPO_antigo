@@ -4,7 +4,6 @@
 #include <math.h>
 #include <sys/stat.h>
 #include <ostream>
-#include <boost/filesystem.hpp>
 #include <iterator>
 
 #include <pcl_conversions/pcl_conversions.h>
@@ -16,6 +15,8 @@
 #include <pcl/filters/statistical_outlier_removal.h>
 #include <pcl/filters/passthrough.h>
 #include <pcl/filters/voxel_grid.h>
+
+#include <sensor_msgs/PointCloud2.h>
 
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -33,7 +34,6 @@ using namespace pcl::io;
 using namespace Eigen;
 using namespace std;
 using namespace cv;
-using namespace boost::filesystem;
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 int getdir(string dir, vector<string> &imgs, vector<string> &nuvens){
@@ -69,9 +69,9 @@ int main(int argc, char **argv)
 
     pcl::console::setVerbosityLevel(pcl::console::L_ALWAYS);
 
-    // Objetos de classe usados no processo
-    ProcessCloud pc;
-    RegisterObjectOptm roo;
+    // Inicia publicador da nuvem parcial e do objeto
+    ros::Publisher pub = nh.advertise<sensor_msgs::PointCloud2>("/acc_obj/obj", 10);
+    sensor_msgs::PointCloud2 msg;
 
     // Ler pasta com os dados
     string nome_param;
@@ -79,6 +79,10 @@ int main(int argc, char **argv)
     char* home;
     home = getenv("HOME");
     string pasta = string(home)+"/Desktop/"+nome_param+"/";
+
+    // Objetos de classe usados no processo
+    ProcessCloud pc(pasta);
+    RegisterObjectOptm roo;
 
     // Se ja houver objeto salvo, deletar ele nesse ponto e comecar outro
     struct stat buffer;
@@ -98,16 +102,26 @@ int main(int argc, char **argv)
     /// Inicia as variaveis - aqui comeca a pancadaria
     ///
     // Nuvem de agora, nuvem referencia, nuvem do objeto acumulado,
-    // nuvem de pixels auxiliar referencia, nuvem de pixels auxiliar atual
+    // Matriz de pixels auxiliar referencia, Matriz de pixels auxiliar atual
     PointCloud<PointTN>::Ptr cnow (new PointCloud<PointTN>), cref (new PointCloud<PointTN>), cobj (new PointCloud<PointTN>);
     PointCloud<PointTN>::Ptr cpixref (new PointCloud<PointTN>), cpixnow (new PointCloud<PointTN>);
+    MatrixXi imrefpix(1080, 1920), imnowpix(1080, 1920);
+    cref->header.frame_id = "map";
+    cnow->header.frame_id = "map";
+    cobj->header.frame_id = "map";
     // Imagem de agora e da referencia
     Mat imnow, imref;
     // Pose da nuvem agora e na referencia
     Matrix4f Tnow, Tref;
+    // Centro e orientacao da camera naquela aquisicao
+    Vector3f C;
+    Quaternion<float> q;
     // Vetor de offset entre centro do laser e da camera - desenho solid, e foco
-    Vector3f t_off_lc(0.0, 0.0448, 0.023);
+    Vector3f t_off_lc(0.01, 0.0448, 0.023);
     float f = 1130;
+    // Vetor de linhas para NVM
+    vector<string> linhas_nvm;
+
 
     /// Inicia primeiro a nuvem referencia e outros dados com o primeiro dado lido
     ///
@@ -117,36 +131,46 @@ int main(int argc, char **argv)
         pc.calculateNormals(cref);
         pc.filterCloudDepthCovariance(cref, 15, 1);
         imref = imread(pasta+nomes_imagens[0]);
+        imrefpix = MatrixXi::Constant(imref.rows, imref.cols, -1);
 
-        // Projetar a nuvem na imagem de forma calibrada, otimizar a cor e salvar em nuvem de
+        // Projetar a nuvem na imagem de forma calibrada, otimizar a cor e salvar em matriz de
         // pontos auxiliar os pixels correspondentes a cada ponto
-        roo.projectCloudAndAnotatePixels(cref, imref, cpixref, f, t_off_lc);
+        roo.projectCloudAndAnotatePixels(cref, imref, cpixref, f, t_off_lc, imrefpix);
         *cobj = *cref;
+        toROSMsg(*cobj, msg);
+        msg.header.frame_id = "map";
+        msg.header.stamp = ros::Time::now();
+        pub.publish(msg);
 
+        // Inicia pose e escreve para o NVM
         Tref = Matrix4f::Identity();
-        Tnow = Tref;
+        Tnow = Tref;        
+        C = -t_off_lc;
+        q = Quaternion<float>::Identity();
+        linhas_nvm.push_back(pc.escreve_linha_imagem(f, nomes_imagens[0], C, q));
     }
 
     /// A partir da segunda nuvem e imagem, processo de match e anotacao
     ///
-    for(int i=1; i<nomes_nuvens.size(); i++){
-        ROS_INFO("Acumulando nuvem de objeto %d ...", i+1);
+    for(size_t i=1; i<nomes_nuvens.size(); i++){
+        ROS_INFO("Acumulando nuvem de objeto %zu ...", i+1);
         // Le dados, filtra e guarda na memoria
-        ROS_INFO("Pre-processando nuvem %d ...", i+1);
+        ROS_INFO("Pre-processando nuvem %zu ...", i+1);
         roo.readCloudAndPreProcess(pasta+nomes_nuvens[i], cnow);
         pc.calculateNormals(cnow);
         pc.filterCloudDepthCovariance(cnow, 15, 1);
         imnow = imread(pasta+nomes_imagens[i]);
+        imnowpix = MatrixXi::Constant(imnow.rows, imnow.cols, -1);
 
         // Projetar nuvem e salvar nuvem auxiliar de pixels        
         ROS_INFO("Projetando para otimizar cores e anotar os pixels ...");
-        roo.projectCloudAndAnotatePixels(cnow, imnow, cpixnow, f, t_off_lc);
+        roo.projectCloudAndAnotatePixels(cnow, imnow, cpixnow, f, t_off_lc, imnowpix);
 
         // Calcular features e matches e retornar os N melhores e seus pontos em 3D
         // correspondentes a partir da nuvem auxiliar de pixels
         ROS_INFO("Match de features 2D e obtendo correspondencias em 3D ...");
         vector<Point2d> matches3Dindices;
-        roo.matchFeaturesAndFind3DPoints(imref, imnow, cpixref, cpixnow, 100, matches3Dindices);
+        roo.matchFeaturesAndFind3DPoints(imref, imnow, cpixref, cpixnow, 100, matches3Dindices, imrefpix, imnowpix);
         ROS_INFO("Foram obtidas %zu correspondencias 3D.", matches3Dindices.size());
 
         // Rodar a otimizacao da transformada por SVD
@@ -163,37 +187,58 @@ int main(int argc, char **argv)
 
         // Soma a nuvem transformada e poe no lugar certo
         ROS_INFO("Registrando nuvem atual no objeto final ...");
-        Matrix4f Tobj = Tnow*Tref*Tnow.inverse();
+        Matrix4f Tobj = Tnow*Tref;
+        transformPointCloudWithNormals<PointTN>(*cnow, *cnow, Tnow.inverse());
         transformPointCloudWithNormals<PointTN>(*cnow, *cnow, Tobj);
         *cobj += *cnow;
+        toROSMsg(*cobj, msg);
+        msg.header.frame_id = "map";
+        msg.header.stamp = ros::Time::now();
+        pub.publish(msg);
 
-        // Filtrando novamente objeto final
-        ROS_INFO("Filtrando e salvando nuvem de objeto ...");
-        StatisticalOutlierRemoval<PointTN> sor;
-        sor.setMeanK(10);
-        sor.setStddevMulThresh(2);
-        sor.setInputCloud(cobj);
-        sor.filter(*cobj);
+        // Calcula a pose da camera e escreve no NVM
+        ROS_INFO("Escrevendo no NVM ...");
+        Matrix4f Tcam = Matrix4f::Identity();
+        Tcam.block<3,1>(0, 3) = t_off_lc;
+        Tcam = Tobj*Tcam;
+        C = -Tcam.block<3,3>(0, 0)*Tcam.block<3,1>(0, 3);
+        q =  Tcam.block<3,3>(0, 0).transpose();
+        linhas_nvm.push_back(pc.escreve_linha_imagem(f, nomes_imagens[i], C, q));
+        pc.compileFinalNVM(linhas_nvm);
 
-        // Salvando a nuvem final do objeto
-        savePLYFileBinary<PointTN>(nome_objeto_final, *cobj);
+//        // Filtrando novamente objeto final
+//        ROS_INFO("Filtrando e salvando nuvem de objeto ...");
+//        StatisticalOutlierRemoval<PointTN> sor;
+//        sor.setMeanK(10);
+//        sor.setStddevMulThresh(2);
+//        sor.setInputCloud(cobj);
+//        sor.filter(*cobj);
+
+//        // Salvando a nuvem final do objeto
+//        savePLYFileBinary<PointTN>(nome_objeto_final, *cobj);
 
         // Atualiza as referencias e parte para a proxima aquisicao
         transformPointCloudWithNormals<PointTN>(*cnow, *cref, Tobj.inverse()); // Traz de volta para a origem a nuvem referencia
-        *cpixref = *cpixnow; // Nuvem de indices ja estareferenciado a origem
+        *cpixref = *cpixnow; // Nuvem de indices ja esta referenciado a origem
+        imrefpix = imnowpix;
         Tref = Tobj;
         imref = imnow;
     }
 
-//    // Filtrando novamente objeto final
-//    StatisticalOutlierRemoval<PointTN> sor;
-//    sor.setMeanK(10);
-//    sor.setStddevMulThresh(2);
-//    sor.setInputCloud(cobj);
-//    sor.filter(*cobj);
+    // Filtrando novamente objeto final
+    ROS_INFO("Filtrando e salvando nuvem de objeto ...");
+    StatisticalOutlierRemoval<PointTN> sor;
+    sor.setMeanK(10);
+    sor.setStddevMulThresh(2);
+    sor.setInputCloud(cobj);
+    sor.filter(*cobj);
 
-//    // Salvando a nuvem final do objeto
-//    savePLYFileBinary<PointTN>(nome_objeto_final, *cobj);
+    // Aplicando filtro polinomial ao resultado
+
+    // Salvando a nuvem final do objeto
+    savePLYFileBinary<PointTN>(nome_objeto_final, *cobj);
+
+    ROS_INFO("Processo finalizado.");
 
     ros::spinOnce();
     return 0;

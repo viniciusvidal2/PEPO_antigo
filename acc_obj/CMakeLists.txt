@@ -5,7 +5,7 @@ project(acc_obj)
 add_compile_options(-std=c++11)
 
 find_package(OpenCV REQUIRED)
-find_package(catkin REQUIRED COMPONENTS roscpp cv_bridge sensor_msgs std_msgs nav_msgs pcl_ros)
+find_package(catkin REQUIRED COMPONENTS roscpp cv_bridge sensor_msgs std_msgs nav_msgs pcl_ros tf2_ros pcl_conversions)
 find_package(OpenMP REQUIRED)
 if(OPENMP_FOUND)
   message(STATUS "OPENMP FOUND")
@@ -19,7 +19,7 @@ include_directories(${PCL_INCLUDE_DIRS})
 include_directories(../libraries/include)
 include_directories(${OpenMP_INCLUDE_DIRS})
 
-catkin_package(CATKIN_DEPENDS DEPENDS roscpp cv_bridge sensor_msgs std_msgs nav_msgs pcl_ros)
+catkin_package(CATKIN_DEPENDS DEPENDS roscpp cv_bridge sensor_msgs std_msgs nav_msgs pcl_ros tf2_ros pcl_conversions)
 
 add_executable(acc_cloud_node src/acc_cloud.cpp ../libraries/src/processcloud.cpp)
 target_compile_options(acc_cloud_node PRIVATE ${OpenMP_FLAGS})

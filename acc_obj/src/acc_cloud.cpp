@@ -53,9 +53,6 @@ int main(int argc, char **argv)
 
     pcl::console::setVerbosityLevel(pcl::console::L_ALWAYS);
 
-    // Objeto da classe de projecao de nuvens
-    ProcessCloud pc;
-
     string nome_param;
     n_.param("pasta", nome_param, string("Dados_PEPO1"));
 
@@ -63,6 +60,9 @@ int main(int argc, char **argv)
     char* home;
     home = getenv("HOME");
     std::string pasta = std::string(home)+"/Desktop/"+nome_param+"/";
+
+    // Objeto da classe de projecao de nuvens
+    ProcessCloud pc(pasta);
 
     /// Ler todas as nuvens, somar e salvar
     ///

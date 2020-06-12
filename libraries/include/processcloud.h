@@ -75,7 +75,7 @@ typedef PointXYZRGBNormal PointTN;
 class ProcessCloud
 {
 public:
-  ProcessCloud();
+  ProcessCloud(string p);
   virtual ~ProcessCloud();
   void calculateNormals(PointCloud<PointT>::Ptr in, PointCloud<PointTN>::Ptr acc_normal);
   void calculateNormals(PointCloud<PointTN>::Ptr acc_normal);

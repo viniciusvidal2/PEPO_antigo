@@ -16,7 +16,7 @@ void RegisterObjectOptm::readCloudAndPreProcess(string name, PointCloud<PointTN>
     loadPLYFile<PointTN>(name, *cloud);
     // Filtro de voxels para aliviar a entrada
     VoxelGrid<PointTN> voxel;
-    float lfsz = 0.02;
+    float lfsz = 0.03;
     voxel.setLeafSize(lfsz, lfsz, lfsz);
     // Filtro de profundidade para nao pegarmos muito fundo
     PassThrough<PointTN> pass;
@@ -24,8 +24,8 @@ void RegisterObjectOptm::readCloudAndPreProcess(string name, PointCloud<PointTN>
     pass.setFilterLimits(0, 5); // Z metros de profundidade
     // Filtro de ruidos aleatorios
     StatisticalOutlierRemoval<PointTN> sor;
-    sor.setMeanK(10);
-    sor.setStddevMulThresh(2);
+    sor.setMeanK(8);
+    sor.setStddevMulThresh(1.5);
     sor.setNegative(false);
     // Passando filtros
     voxel.setInputCloud(cloud);
@@ -36,7 +36,7 @@ void RegisterObjectOptm::readCloudAndPreProcess(string name, PointCloud<PointTN>
     sor.filter(*cloud);
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
-void RegisterObjectOptm::projectCloudAndAnotatePixels(PointCloud<PointTN>::Ptr cloud, Mat im, PointCloud<PointTN>::Ptr cloud_pix, float f, Vector3f t){
+void RegisterObjectOptm::projectCloudAndAnotatePixels(PointCloud<PointTN>::Ptr cloud, Mat im, PointCloud<PointTN>::Ptr cloud_pix, float f, Vector3f t, MatrixXi &impix){
     // Matriz intrinseca e extrinseca
     Matrix3f K;
     K << f, 0, 973,//image.cols/2.0,
@@ -73,6 +73,7 @@ void RegisterObjectOptm::projectCloudAndAnotatePixels(PointCloud<PointTN>::Ptr c
                 cloud_pix->points[i].normal_x = cloud->points[i].x;
                 cloud_pix->points[i].normal_y = cloud->points[i].y;
                 cloud_pix->points[i].normal_z = cloud->points[i].z;
+                impix(X(1,0), X(0,0)) = i;
             } else {
                 cloud_pix->points[i].x = 1000000; cloud_pix->points[i].y = 1000000;
             }
@@ -80,7 +81,6 @@ void RegisterObjectOptm::projectCloudAndAnotatePixels(PointCloud<PointTN>::Ptr c
             cloud_pix->points[i].x = 1000000; cloud_pix->points[i].y = 1000000;
         }
     }
-    savePLYFileBinary("/home/vinicius/Desktop/vaisefuder.ply", *cloud_pix);
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
 Matrix4f RegisterObjectOptm::icp(PointCloud<PointTN>::Ptr ctgt, PointCloud<PointTN>::Ptr csrc, int its){
@@ -94,7 +94,7 @@ Matrix4f RegisterObjectOptm::icp(PointCloud<PointTN>::Ptr ctgt, PointCloud<Point
     icp.setMaximumIterations(its); // Chute inicial bom 10-100
     icp.setTransformationEpsilon(1*1e-8);
     icp.setEuclideanFitnessEpsilon(1*1e-10);
-    icp.setMaxCorrespondenceDistance(0.05);
+    icp.setMaxCorrespondenceDistance(0.04);
     // Alinhando
     PointCloud<PointTN> dummy;
     icp.align(dummy, Matrix4f::Identity());
@@ -108,7 +108,8 @@ Matrix4f RegisterObjectOptm::icp(PointCloud<PointTN>::Ptr ctgt, PointCloud<Point
     return Ticp;
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
-void RegisterObjectOptm::matchFeaturesAndFind3DPoints(Mat imref, Mat imnow, PointCloud<PointTN>::Ptr cref, PointCloud<PointTN>::Ptr cnow, int npontos3d, vector<Point2d> &matches3d){
+void RegisterObjectOptm::matchFeaturesAndFind3DPoints(Mat imref, Mat imnow, PointCloud<PointTN>::Ptr cref, PointCloud<PointTN>::Ptr cnow, int npontos3d, vector<Point2d> &matches3d,
+                                                      MatrixXi refpix, MatrixXi nowpix){
     /// Calculando descritores SIFT ///
     // Keypoints e descritores para astra e zed
     vector<KeyPoint> kpref, kpnow;
@@ -121,10 +122,10 @@ void RegisterObjectOptm::matchFeaturesAndFind3DPoints(Mat imref, Mat imnow, Poin
     vector< DMatch > good_matches;
 
     int tent = 0; // tentativas maximas de achar npontos3d correspondencias bacanas
-    float min_hessian = 2000;
+    float min_hessian = 1000; //sigma_thresh = 1.6/10, edge_thresh = 10*10, contrast_thresh = 0.04/10;
 
     /// Loop de busca por matches e pontos 3D correspondentes ///
-    while(tent < 15 && matches3d.size() <= npontos3d){
+    while(tent < 10 && matches3d.size() <= npontos3d){
         // Resetando vetores do algoritmo para buscarem novamente
         matches.clear(); good_matches.clear(); matches3d.clear();
         goodimnowpts.clear(); goodimrefpts.clear();
@@ -135,28 +136,33 @@ void RegisterObjectOptm::matchFeaturesAndFind3DPoints(Mat imref, Mat imnow, Poin
         f2d->detectAndCompute(imnow, Mat(), kpnow, dnow);
         matcher->knnMatch(dref, dnow, matches, 2);
 
+//        cout << "Na tentativa " << tent << " com " << matches.size() << " matches." << endl;
         for (size_t i = 0; i < matches.size(); i++){
             if (matches.at(i).size() >= 2){
-                if (matches.at(i).at(0).distance < 0.7*matches.at(i).at(1).distance)
+                if (matches.at(i).at(0).distance < 0.8*matches.at(i).at(1).distance)
                     good_matches.push_back(matches.at(i).at(0));
             }
         }
-        // Filtrando por distancia media entre os matches
-        vector<float> distances (good_matches.size());
-        for (int i=0; i < good_matches.size(); i++)
-            distances[i] = good_matches[i].distance;
-        float average = accumulate(distances.begin(), distances.end(), 0.0) / distances.size();
-        for(vector<DMatch>::iterator it = good_matches.begin(); it!=good_matches.end();){
-            if(it->distance > 1.3*average)
-                good_matches.erase(it);
-            else
-                ++it;
-        }
-        // Filtrando por angulo das linhas entre os matches
-        this->filterMatchesLineCoeff(good_matches, kpref, kpnow, imref.cols, 1);
+//        cout << "Na tentativa " << tent << " com " << good_matches.size() << " matches." << endl;
+//        // Filtrando por distancia media entre os matches
+//        vector<float> distances (good_matches.size());
+//        for (int i=0; i < good_matches.size(); i++)
+//            distances[i] = good_matches[i].distance;
+//        float average = accumulate(distances.begin(), distances.end(), 0.0) / distances.size();
+//        for(vector<DMatch>::iterator it = good_matches.begin(); it!=good_matches.end();){
+//            if(it->distance > 0.8*average)
+//                good_matches.erase(it);
+//            else
+//                ++it;
+//        }
+//        cout << "Na tentativa " << tent << " com " << good_matches.size() << " matches." << endl;
+//        // Filtrando por angulo das linhas entre os matches
+//        this->filterMatchesLineCoeff(good_matches, kpref, kpnow, imref.cols, 1);
+//        cout << "Na tentativa " << tent << " com " << good_matches.size() << " matches." << endl;
 
         tent += 1;
-        min_hessian = 0.7*min_hessian;
+        min_hessian *= 0.7;
+//        sigma_thresh = sigma_thresh*0.7; contrast_thresh = contrast_thresh*0.7; edge_thresh = edge_thresh/0.7;
 
         // Achando realmente os keypoints bons e anotando coordenadas
         imrefpts.resize(good_matches.size()); imnowpts.resize(good_matches.size());
@@ -170,41 +176,25 @@ void RegisterObjectOptm::matchFeaturesAndFind3DPoints(Mat imref, Mat imnow, Poin
         if(good_matches.size() > npontos3d){
             // Para cada match
             for(size_t j=0; j<good_matches.size(); j++){
-                float dist_thresh = 6, dist_good = 3, best_dist = 1000, dx2, dy2;
-                int curr_pt_ref = -1, curr_pt_now = -1; // Indice do melhor ponto no momento
-                // Procurando na nuvem REF
-                for(size_t i=0; i<cref->size(); i++){
-                    dx2 = pow(cref->points[i].x - imrefpts[j].x, 2), dy2 = pow(cref->points[i].y - imrefpts[j].y, 2);
-                    if(sqrt(dx2+dy2) < best_dist && sqrt(dx2+dy2) < dist_thresh){
-                        best_dist = sqrt(dx2+dy2);
-                        curr_pt_ref = i;
-                        if(best_dist < dist_good) // Aqui estamos suficientemente perto, esta encontrado
-                            break;
-                    }
-                }
-                // Procurando na nuvem NOW
-                best_dist = 1000;
-                for(size_t i=0; i<cnow->size(); i++){
-                    dx2 = pow(cnow->points[i].x - imnowpts[j].x, 2), dy2 = pow(cnow->points[i].y - imnowpts[j].y, 2);
-                    if(sqrt(dx2+dy2) < best_dist && sqrt(dx2+dy2) < dist_thresh){
-                        best_dist = sqrt(dx2+dy2);
-                        curr_pt_now = i;
-                        if(best_dist < dist_good) // Aqui estamos suficientemente perto, esta encontrado
-                            break;
-                    }
-                }
-                // Se foi encontrado um indice para cada nuvem, anotar isso no vetor de indices de match nas nuvens
-                if(curr_pt_ref != -1 && curr_pt_now != -1){
-                    Point2d m3d;
-                    m3d.x = curr_pt_ref; m3d.y = curr_pt_now;
-                    goodimrefpts.push_back(imrefpts[j]); goodimnowpts.push_back(imnowpts[j]);
-                    matches3d.push_back(m3d); // Primeiro referencia ref, depois atual now
-                }
-                // Se achou ja npontos3d de matches boas, podemos parar aqui
-                if(matches3d.size() > npontos3d)
+            int curr_pt_ref = -1, curr_pt_now = -1; // Indice do melhor ponto no momento
+            // Na imagem ref ver se naquela redondeza ha um pixel
+            curr_pt_ref = this->searchNeighbors(refpix, imrefpts[j].y, imrefpts[j].x, 15);
+            // Na imagem now ver se naquela redondeza ha um pixel
+            curr_pt_now = this->searchNeighbors(nowpix, imnowpts[j].y, imnowpts[j].x, 15);
+
+            // Se foi encontrado um indice para cada nuvem, anotar isso no vetor de indices de match nas nuvens
+            if(curr_pt_ref != -1 && curr_pt_now != -1){
+                Point2d m3d;
+                m3d.x = curr_pt_ref; m3d.y = curr_pt_now;
+                goodimrefpts.push_back(imrefpts[j]); goodimnowpts.push_back(imnowpts[j]);
+                matches3d.push_back(m3d); // Primeiro referencia ref, depois atual now
+            }
+            // Se achou ja npontos3d de matches boas, podemos parar aqui
+            if(matches3d.size() > npontos3d)
                     break;
             } // Fim do for de matches
         }
+//        cout << "Na tentativa " << tent-1 << " com " << matches3d.size() << " matches." << endl;
     } // Fim do while
 
     // Se nao deu certo, avisar com enfase
@@ -360,3 +350,24 @@ Matrix4f RegisterObjectOptm::optmizeTransformP2P(PointCloud<PointTN>::Ptr cref, 
 
     return Tp2p;
 }
+/////////////////////////////////////////////////////////////////////////////////////////////////
+int RegisterObjectOptm::searchNeighbors(MatrixXi im, int r, int c, int l){
+    // Duplo for sobre a vizinhanca pra ver se encontra, e o mais perto de todos leva
+    int indice = -1; // Indice comeca como -1, se for encontrado temos coisa melhor
+    for(int i=r-l; i<r+l; i++){
+        if(i >= 0 && i < im.cols()){
+            for(int j=c-l; j<c+l; j++){
+                if(j > 0 && j < im.rows()){
+                    // Se nesse lugar esta algo diferente de 0
+                    if(im(j, i) != -1){
+                        indice = im(j, i);
+                        return indice;
+                    }
+                }
+            }
+        }
+    }
+
+    return indice;
+}
+/////////////////////////////////////////////////////////////////////////////////////////////////

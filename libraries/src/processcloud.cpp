@@ -1,7 +1,7 @@
 #include "../include/processcloud.h"
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
-ProcessCloud::ProcessCloud()
+ProcessCloud::ProcessCloud(string p):pasta(p)
 {
     // Dimensoes da camera USB de entrada
     cam_w = 1920; cam_h = 1080;
@@ -9,10 +9,6 @@ ProcessCloud::ProcessCloud()
     K_cam << 1130,  0.0, float(cam_w)/2,//432.741036,
              0.00, 1130, float(cam_h)/2,//412.362072,
              0.00,  0.0,   1.000000;
-    // Inicia nome da pasta -> criar pasta no Dados_B9 no DESKTOP!
-    char* home;
-    home = getenv("HOME");
-    pasta = std::string(home)+"/Desktop/Dados_B9/";
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
 ProcessCloud::~ProcessCloud(){
@@ -487,7 +483,7 @@ void ProcessCloud::writeNVM(string nome, string nome_imagem, Eigen::VectorXf par
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
 std::string ProcessCloud::escreve_linha_imagem(float foco, std::string nome, Eigen::MatrixXf C, Eigen::Quaternion<float> q){
-    std::string linha = pasta+nome+".png";
+    std::string linha = pasta+nome;
     // Adicionar foco
     linha = linha + " " + std::to_string(foco);
     // Adicionar quaternion
@@ -502,12 +498,21 @@ std::string ProcessCloud::escreve_linha_imagem(float foco, std::string nome, Eig
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
 void ProcessCloud::compileFinalNVM(vector<string> linhas){
+    // Se ja existe o arquivo, deletar para sobreescrever
+    struct stat buffer;
+    string nome_nvm_final = pasta + "cameras.nvm";
+    if(!stat(nome_nvm_final.c_str(), &buffer)){
+        if(remove(nome_nvm_final.c_str()) == 0)
+            ROS_INFO("Deletamos NVM anterior.");
+        else
+            ROS_ERROR("NVM final anterior nao foi deletado.");
+    }
     // Anota num arquivo a partir do nome vindo
-    ofstream nvm(pasta+"cameras.nvm");
+    ofstream nvm(nome_nvm_final);
     if(nvm.is_open()){
 
         nvm << "NVM_V3\n\n";
-        nvm << std::to_string(linhas.size())+"\n"; // Quantas imagens, sempre uma aqui
+        nvm << std::to_string(linhas.size())+"\n"; // Quantas imagens
         for(int i=0; i < linhas.size(); i++)
             nvm << linhas[i]; // Imagem com detalhes de camera
 

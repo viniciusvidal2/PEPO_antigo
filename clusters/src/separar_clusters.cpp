@@ -98,11 +98,11 @@ int main(int argc, char **argv)
     // Ler pasta e obter as nuvens e imagens, guardar os nomes nos vetores corretos
     vector<string> nomes_nuvens, nomes_imagens;
     getdir(nome_pasta, nomes_imagens, nomes_nuvens);
-    ROS_INFO("Temos um total de %d nuvens a processar ...", nomes_nuvens.size());
+    ROS_INFO("Temos um total de %zu nuvens a processar ...", nomes_nuvens.size());
 
     // Classes que possuem funcoes de processamento
     Clusters cl;
-    ProcessCloud pc;
+    ProcessCloud pc(nome_pasta);
 
     //////////////////////////
     /// Para cada nuvem parcial, realizar o procedimento
@@ -119,7 +119,7 @@ int main(int argc, char **argv)
         vector<PointCloud<PointT >> vetor_planos     , vetor_clusters     ;
         vector<PointCloud<PointTN>> vetor_planos_filt, vetor_clusters_filt;
 
-        ROS_WARN("Comecando a processar nuvem %d de %d ...", i+1, nomes_nuvens.size());
+        ROS_WARN("Comecando a processar nuvem %d de %zu ...", i+1, nomes_nuvens.size());
 
         // Le nuvem atual
         loadPLYFile<PointT>(nome_pasta+nomes_nuvens[i], *inicial);
@@ -240,7 +240,7 @@ int main(int argc, char **argv)
         //        }
 
         // Adiciona nos vetores de clusters e planos de toda a acumulacao
-        ROS_INFO("Registrando os %d planos e %d clusters obtidos ...", vetor_planos_filt.size(), vetor_clusters_filt.size());
+        ROS_INFO("Registrando os %zu planos e %zu clusters obtidos ...", vetor_planos_filt.size(), vetor_clusters_filt.size());
         for(size_t i=0; i < vetor_planos_filt.size(); i++)
             planos_totais.push_back(vetor_planos_filt[i]);
         for(size_t i=0; i < vetor_clusters_filt.size(); i++)
