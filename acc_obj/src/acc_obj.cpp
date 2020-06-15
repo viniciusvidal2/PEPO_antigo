@@ -117,7 +117,7 @@ int main(int argc, char **argv)
     Vector3f C;
     Quaternion<float> q;
     // Vetor de offset entre centro do laser e da camera - desenho solid, e foco
-    Vector3f t_off_lc(0.01, 0.0448, 0.023);
+    Vector3f t_off_lc(0.02, 0.0548, 0.023);
     float f = 1130;
     // Vetor de linhas para NVM
     vector<string> linhas_nvm;
@@ -158,7 +158,7 @@ int main(int argc, char **argv)
         ROS_INFO("Pre-processando nuvem %zu ...", i+1);
         roo.readCloudAndPreProcess(pasta+nomes_nuvens[i], cnow);
         pc.calculateNormals(cnow);
-        pc.filterCloudDepthCovariance(cnow, 15, 1);
+        pc.filterCloudDepthCovariance(cnow, 20, 1);
         imnow = imread(pasta+nomes_imagens[i]);
         imnowpix = MatrixXi::Constant(imnow.rows, imnow.cols, -1);
 
@@ -166,11 +166,14 @@ int main(int argc, char **argv)
         ROS_INFO("Projetando para otimizar cores e anotar os pixels ...");
         roo.projectCloudAndAnotatePixels(cnow, imnow, cpixnow, f, t_off_lc, imnowpix);
 
+        // Levar aonde paramos no processo de reconstrucao do objeto
+        transformPointCloudWithNormals<PointTN>(*cnow, *cnow, Tref);
+
         // Calcular features e matches e retornar os N melhores e seus pontos em 3D
         // correspondentes a partir da nuvem auxiliar de pixels
         ROS_INFO("Match de features 2D e obtendo correspondencias em 3D ...");
         vector<Point2d> matches3Dindices;
-        roo.matchFeaturesAndFind3DPoints(imref, imnow, cpixref, cpixnow, 100, matches3Dindices, imrefpix, imnowpix);
+        roo.matchFeaturesAndFind3DPoints(imref, imnow, cpixref, cpixnow, 70, matches3Dindices, imrefpix, imnowpix);
         ROS_INFO("Foram obtidas %zu correspondencias 3D.", matches3Dindices.size());
 
         // Rodar a otimizacao da transformada por SVD
@@ -182,15 +185,17 @@ int main(int argc, char **argv)
 
         // Refina a transformacao por ICP com poucas iteracoes
         ROS_INFO("Refinando registro por ICP ...");
-        Matrix4f Ticp = roo.icp(cref, cnow, 200);
-        Tnow = Ticp*Tnow;
+        Matrix4f Ticp = roo.icp(cobj, cnow, 80);
 
         // Soma a nuvem transformada e poe no lugar certo
         ROS_INFO("Registrando nuvem atual no objeto final ...");
-        Matrix4f Tobj = Tnow*Tref;
-        transformPointCloudWithNormals<PointTN>(*cnow, *cnow, Tnow.inverse());
-        transformPointCloudWithNormals<PointTN>(*cnow, *cnow, Tobj);
+        Matrix4f Tobj = Ticp*Tnow*Tref;
         *cobj += *cnow;
+        StatisticalOutlierRemoval<PointTN> sor;
+        sor.setInputCloud(cobj);
+        sor.setMeanK(30);
+        sor.setStddevMulThresh(2.5);
+        sor.filter(*cobj);
         toROSMsg(*cobj, msg);
         msg.header.frame_id = "map";
         msg.header.stamp = ros::Time::now();
@@ -201,24 +206,12 @@ int main(int argc, char **argv)
         Matrix4f Tcam = Matrix4f::Identity();
         Tcam.block<3,1>(0, 3) = t_off_lc;
         Tcam = Tobj*Tcam;
-        C = -Tcam.block<3,3>(0, 0)*Tcam.block<3,1>(0, 3);
-        q =  Tcam.block<3,3>(0, 0).transpose();
+        C = Tcam.block<3,1>(0, 3);
+        q = Tcam.block<3,3>(0, 0).transpose();
         linhas_nvm.push_back(pc.escreve_linha_imagem(f, nomes_imagens[i], C, q));
-        pc.compileFinalNVM(linhas_nvm);
-
-//        // Filtrando novamente objeto final
-//        ROS_INFO("Filtrando e salvando nuvem de objeto ...");
-//        StatisticalOutlierRemoval<PointTN> sor;
-//        sor.setMeanK(10);
-//        sor.setStddevMulThresh(2);
-//        sor.setInputCloud(cobj);
-//        sor.filter(*cobj);
-
-//        // Salvando a nuvem final do objeto
-//        savePLYFileBinary<PointTN>(nome_objeto_final, *cobj);
 
         // Atualiza as referencias e parte para a proxima aquisicao
-        transformPointCloudWithNormals<PointTN>(*cnow, *cref, Tobj.inverse()); // Traz de volta para a origem a nuvem referencia
+        *cref = *cnow;
         *cpixref = *cpixnow; // Nuvem de indices ja esta referenciado a origem
         imrefpix = imnowpix;
         Tref = Tobj;
@@ -233,10 +226,9 @@ int main(int argc, char **argv)
     sor.setInputCloud(cobj);
     sor.filter(*cobj);
 
-    // Aplicando filtro polinomial ao resultado
-
     // Salvando a nuvem final do objeto
     savePLYFileBinary<PointTN>(nome_objeto_final, *cobj);
+    pc.compileFinalNVM(linhas_nvm);
 
     ROS_INFO("Processo finalizado.");
 
