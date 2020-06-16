@@ -49,7 +49,7 @@ bool QNode::init() {
 	ros::NodeHandle n;
         // Iniciando publicadores de imagem e nuvem
         im_pub = n.advertise<sensor_msgs::Image>("/imagem", 10);
-        cl_proj_pub = n.advertise<sensor_msgs::Image>("nuvem_projetada", 10);
+        cl_proj_pub = n.advertise<sensor_msgs::Image>("/nuvem_projetada", 10);
         cl_pub = n.advertise<sensor_msgs::PointCloud2>("/nuvem_obj", 10);
         // Add your ros communications here.
 	start();

@@ -28,9 +28,37 @@
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/PointCloud2.h>
 
+#include <pcl_conversions/pcl_conversions.h>
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
+#include <pcl/io/ply_io.h>
+
+#include <cv_bridge/cv_bridge.h>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
+
+#include "../../msgs/imagem.pb.h"
+#include "../../msgs/nuvem.pb.h"
+#include "../../msgs/arquivos.pb.h"
+#include "../../msgs/nvm.pb.h"
+#include "google/protobuf/io/coded_stream.h"
+#include "google/protobuf/io/zero_copy_stream.h"
+
+#include <zmq.hpp>
+#include <zmq_utils.h>
+
 /*****************************************************************************
 ** Namespaces
 *****************************************************************************/
+using namespace ArquivosMsgProto;
+using namespace ImagemMsgProto;
+using namespace NuvemMsgProto;
+using namespace NVMMsgProto;
+using namespace pcl;
+using namespace pcl::io;
+using namespace cv;
+using namespace std;
+using namespace zmq;
 
 namespace programinha {
 
