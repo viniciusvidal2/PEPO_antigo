@@ -61,6 +61,9 @@ MainWindow::MainWindow(int argc, char** argv, QWidget *parent)
     ui.horizontalSlider_brightness->setRange(50, 130);
     ui.horizontalSlider_exposure->setValue(1500);
     ui.horizontalSlider_brightness->setValue(80);
+
+    // No externo pode funcionar
+    qnode.run();
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 MainWindow::~MainWindow() {}
@@ -96,8 +99,9 @@ void programinha::MainWindow::on_pushButton_iniciarcaptura_clicked()
         else
             ROS_ERROR("Comando de inicio da captura nao pode ser executado.");
         // Acertando a camera de acordo com os sliders
-        ssh_channel_request_exec(channel, "comando v4...");
-        ssh_channel_request_exec(channel, "comando v4...");
+        ssh_channel_request_exec(channel, "v4l2-ctl --set-ctrl=exposure_auto=1");
+//        ssh_channel_request_exec(channel, ("v4l2-ctl --set-ctrl=exposure_absolute="+to_string(ui.horizontalSlider_exposure->value())).c_str());
+//        ssh_channel_request_exec(channel, ("v4l2-ctl --set-ctrl=brightness="+to_string(ui.horizontalSlider_brightness->value())).c_str());
         // Falando o que tem de output do roslaunch
         char buffer[256];
         int nbytes;
@@ -120,8 +124,6 @@ void programinha::MainWindow::on_pushButton_finalizarcaptura_clicked(){
     // Iniciando canal e secao SSH
     ssh_channel channel;
     channel = ssh_channel_new(pepo_ssh);
-    char buffer[256];
-    int nbytes;
     if(ssh_channel_open_session(channel) == SSH_OK){
         // Enviando comando para matar os nos
         if(ssh_channel_request_exec(channel, "rosnode kill --all") == SSH_OK)
@@ -132,13 +134,32 @@ void programinha::MainWindow::on_pushButton_finalizarcaptura_clicked(){
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void programinha::MainWindow::on_horizontalSlider_brightness_sliderReleased(){
-
+    // Pega o valor
+    int valor = ui.horizontalSlider_brightness->value();
+    string comando = "v4l2-ctl --set-ctrl=brightness=";//+to_string(valor);
+    // Inicia o canal e envia o comando
+    ssh_channel channel;
+    channel = ssh_channel_new(pepo_ssh);
+    if(ssh_channel_open_session(channel) == SSH_OK){
+        if(ssh_channel_request_exec(channel, comando.c_str()) == SSH_OK)
+            ROS_INFO("Brilho alterado com sucesso");
+    }
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void programinha::MainWindow::on_horizontalSlider_exposure_sliderReleased(){
-
+    // Pega o valor
+    int valor = ui.horizontalSlider_exposure->value();
+    string comando = "v4l2-ctl --set-ctrl=exposure_absolute=";//+to_string(valor);
+    // Inicia o canal e envia o comando
+    ssh_channel channel;
+    channel = ssh_channel_new(pepo_ssh);
+    if(ssh_channel_open_session(channel) == SSH_OK){
+        ssh_channel_request_exec(channel, "v4l2-ctl --set-ctrl=exposure_auto=1");
+        if(ssh_channel_request_exec(channel, comando.c_str()) == SSH_OK)
+            ROS_INFO("Exposicao alterada com sucesso");
+    }
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void programinha::MainWindow::on_pushButton_cameraimagemcalibrar_clicked(){
-
+    system("gnome-terminal -x sh -c 'rqt_image_view /imagem'");
 }
