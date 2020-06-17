@@ -29,8 +29,9 @@ namespace programinha {
 
 QNode::QNode(int argc, char** argv ) :
 	init_argc(argc),
-	init_argv(argv)
-	{}
+        init_argv(argv){
+    this->init();
+}
 
 QNode::~QNode() {
     if(ros::isStarted()) {
@@ -46,11 +47,7 @@ bool QNode::init() {
 		return false;
 	}
 	ros::start(); // explicitly needed since our nodehandle is going out of scope.
-	ros::NodeHandle n;
-        // Iniciando publicadores de imagem e nuvem
-        im_pub = n.advertise<sensor_msgs::Image>("/imagem", 10);
-        cl_proj_pub = n.advertise<sensor_msgs::Image>("/nuvem_projetada", 10);
-        cl_pub = n.advertise<sensor_msgs::PointCloud2>("/nuvem_obj", 10);
+        ros::NodeHandle n;
         // Add your ros communications here.
 	start();
 	return true;

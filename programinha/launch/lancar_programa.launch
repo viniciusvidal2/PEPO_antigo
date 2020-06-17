@@ -1,0 +1,11 @@
+<launch>
+<!--Lancar no de recebimento de imagem-->
+<!--<node name="recebe_imagem" pkg="zmq_ros" type="recebe_imagem" output="screen">-->
+<!--</node>-->
+<!--Lancar no de recebimento de imagem-->
+<!--<node name="recebe_nuvem" pkg="zmq_ros" type="recebe_nuvem" output="screen">-->
+<!--</node>-->
+<!--Lancar no da janela do programa-->
+<node name="programa" pkg="programinha" type="programinha" output="screen">
+</node>
+</launch>

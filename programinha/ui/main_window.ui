@@ -23,105 +23,142 @@
   <widget class="QWidget" name="centralwidget">
    <layout class="QHBoxLayout">
     <item>
-     <widget class="QGroupBox" name="groupBox_iniciossh">
-      <property name="title">
-       <string>Inicio SSH</string>
-      </property>
-      <widget class="QRadioButton" name="radioButton_space">
-       <property name="geometry">
-        <rect>
-         <x>30</x>
-         <y>70</y>
-         <width>112</width>
-         <height>23</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string>Space</string>
-       </property>
-      </widget>
-      <widget class="QRadioButton" name="radioButton_object">
-       <property name="geometry">
-        <rect>
-         <x>30</x>
-         <y>100</y>
-         <width>112</width>
-         <height>23</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string>Object</string>
-       </property>
-       <property name="checked">
-        <bool>true</bool>
-       </property>
-      </widget>
-      <widget class="QPushButton" name="pushButton_iniciarcaptura">
-       <property name="geometry">
-        <rect>
-         <x>20</x>
-         <y>130</y>
-         <width>171</width>
-         <height>25</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string>Iniciar captura</string>
-       </property>
-      </widget>
-      <widget class="QLineEdit" name="lineEdit_pasta">
-       <property name="geometry">
-        <rect>
-         <x>210</x>
-         <y>80</y>
-         <width>113</width>
-         <height>25</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string>Dados_PEPO</string>
-       </property>
-      </widget>
-      <widget class="QLabel" name="label_nomepasta">
-       <property name="geometry">
-        <rect>
-         <x>210</x>
-         <y>60</y>
-         <width>131</width>
-         <height>17</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string>Nome da Pasta:</string>
-       </property>
-      </widget>
-      <widget class="QLabel" name="label_tipodecaptura">
-       <property name="geometry">
-        <rect>
-         <x>30</x>
-         <y>40</y>
-         <width>121</width>
-         <height>17</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string>Tipo de captura:</string>
-       </property>
-      </widget>
-      <widget class="QPushButton" name="pushButton_finalizarcaptura">
-       <property name="geometry">
-        <rect>
-         <x>210</x>
-         <y>130</y>
-         <width>171</width>
-         <height>25</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string>Finalizar captura</string>
-       </property>
-      </widget>
-     </widget>
+     <layout class="QVBoxLayout" name="verticalLayout">
+      <item>
+       <widget class="QGroupBox" name="groupBox_iniciossh">
+        <property name="title">
+         <string>Inicio SSH</string>
+        </property>
+        <widget class="QRadioButton" name="radioButton_space">
+         <property name="geometry">
+          <rect>
+           <x>30</x>
+           <y>70</y>
+           <width>112</width>
+           <height>23</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Space</string>
+         </property>
+        </widget>
+        <widget class="QRadioButton" name="radioButton_object">
+         <property name="geometry">
+          <rect>
+           <x>30</x>
+           <y>100</y>
+           <width>112</width>
+           <height>23</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Object</string>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
+        </widget>
+        <widget class="QPushButton" name="pushButton_iniciarcaptura">
+         <property name="geometry">
+          <rect>
+           <x>20</x>
+           <y>130</y>
+           <width>171</width>
+           <height>25</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Iniciar captura</string>
+         </property>
+        </widget>
+        <widget class="QLineEdit" name="lineEdit_pasta">
+         <property name="geometry">
+          <rect>
+           <x>210</x>
+           <y>80</y>
+           <width>113</width>
+           <height>25</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Dados_PEPO</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="label_nomepasta">
+         <property name="geometry">
+          <rect>
+           <x>210</x>
+           <y>60</y>
+           <width>131</width>
+           <height>17</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Nome da Pasta:</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="label_tipodecaptura">
+         <property name="geometry">
+          <rect>
+           <x>30</x>
+           <y>40</y>
+           <width>121</width>
+           <height>17</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Tipo de captura:</string>
+         </property>
+        </widget>
+        <widget class="QPushButton" name="pushButton_finalizarcaptura">
+         <property name="geometry">
+          <rect>
+           <x>210</x>
+           <y>130</y>
+           <width>171</width>
+           <height>25</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Finalizar captura</string>
+         </property>
+        </widget>
+       </widget>
+      </item>
+      <item>
+       <widget class="QGroupBox" name="groupBox_controlecapturaobjeto">
+        <property name="title">
+         <string>Captura de objeto</string>
+        </property>
+        <widget class="QPushButton" name="pushButton_capturar">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>40</y>
+           <width>231</width>
+           <height>25</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Capturar</string>
+         </property>
+        </widget>
+        <widget class="QPushButton" name="pushButton_visualizar">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>70</y>
+           <width>231</width>
+           <height>25</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Visualizar</string>
+         </property>
+        </widget>
+       </widget>
+      </item>
+     </layout>
     </item>
     <item>
      <widget class="QGroupBox" name="groupBox_calibrarcamera">
