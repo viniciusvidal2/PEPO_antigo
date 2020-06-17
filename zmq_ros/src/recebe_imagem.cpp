@@ -34,7 +34,7 @@ int main(int argc, char **argv)
   // Iniciando o contexto e subscriber para as mensagens na porta TCP correta
   ROS_WARN("LIGANDO CONTEXTO E SUBSCRIBER ZMQ, PORTA 5557");
   context_t ctx{1};
-  socket_t receiver(ctx, ZMQ_PULL); // Tipo PULL para aguardar a mensagem e nao perder nada enviado
+  socket_t receiver(ctx, ZMQ_SUB); // Tipo PULL para aguardar a mensagem e nao perder nada enviado
   receiver.connect("tcp://192.168.0.101:5557");
 
   // Publisher para imagem
