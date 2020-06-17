@@ -39,7 +39,7 @@ MainWindow::MainWindow(int argc, char** argv, QWidget *parent)
 
     // Acertando o SSH
     pepo_ssh = ssh_new();
-    int verbosity = SSH_LOG_INFO;
+    int verbosity = SSH_LOG_WARNING;
     ssh_options_set(pepo_ssh, SSH_OPTIONS_HOST, "192.168.0.101");
     ssh_options_set(pepo_ssh, SSH_OPTIONS_LOG_VERBOSITY, &verbosity);
     ssh_options_set(pepo_ssh, SSH_OPTIONS_PORT, &pepo_ssh_port);
@@ -49,9 +49,9 @@ MainWindow::MainWindow(int argc, char** argv, QWidget *parent)
         ROS_INFO("Conectamos por SSH.");
     else
         ROS_ERROR("Nao foi possivel conectar por SSH.");
-    char *password = "12345";
-//    rc = ssh_userauth_password(pepo_ssh, "pepo", password);
-    rc = ssh_userauth_autopubkey(pepo_ssh, password);
+    string password = "12";
+    rc = ssh_userauth_password(pepo_ssh, "pepo", password.c_str());
+//    rc = ssh_userauth_autopubkey(pepo_ssh, password);
     if(rc == SSH_AUTH_SUCCESS)
         ROS_INFO("Conectamos por SSH com o password.");
     else
@@ -63,8 +63,6 @@ MainWindow::MainWindow(int argc, char** argv, QWidget *parent)
     ui.horizontalSlider_exposure->setValue(1500);
     ui.horizontalSlider_brightness->setValue(80);
 
-    // No externo pode funcionar
-    qnode.run();
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 MainWindow::~MainWindow() {}
@@ -92,8 +90,6 @@ void programinha::MainWindow::on_pushButton_iniciarcaptura_clicked()
     // Iniciando canal e secao SSH
     ssh_channel channel;
     channel = ssh_channel_new(pepo_ssh);
-    char buffer[256];
-    int nbytes;
     if(ssh_channel_open_session(channel) == SSH_OK){
         if(ssh_channel_request_exec(channel, comando.c_str()) == SSH_OK)
             ROS_INFO("Comando de inicio do processo foi enviado.");
@@ -103,21 +99,6 @@ void programinha::MainWindow::on_pushButton_iniciarcaptura_clicked()
         ssh_channel_request_exec(channel, "v4l2-ctl --set-ctrl=exposure_auto=1");
         ssh_channel_request_exec(channel, ("v4l2-ctl --set-ctrl=exposure_absolute="+to_string(ui.horizontalSlider_exposure->value())).c_str());
         ssh_channel_request_exec(channel, ("v4l2-ctl --set-ctrl=brightness="+to_string(ui.horizontalSlider_brightness->value())).c_str());
-        // Falando o que tem de output do roslaunch
-        char buffer[256];
-        int nbytes;
-        nbytes = ssh_channel_read(channel, buffer, sizeof(buffer), 0);
-        while (nbytes > 0)
-        {
-            if (fwrite(buffer, 1, nbytes, stdout) != nbytes)
-            {
-                ssh_channel_close(channel);
-                ssh_channel_free(channel);
-                cout<< SSH_ERROR;
-            }
-            nbytes = ssh_channel_read(channel, buffer, sizeof(buffer), 0);
-        }
-
     }
     ssh_channel_close(channel);
     ssh_channel_free(channel);
@@ -172,7 +153,7 @@ void programinha::MainWindow::on_horizontalSlider_exposure_sliderReleased(){
 void programinha::MainWindow::on_pushButton_cameraimagemcalibrar_clicked(){
     system("gnome-terminal -x sh -c 'rqt_image_view /imagem'");
 }
-
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void programinha::MainWindow::on_pushButton_capturar_clicked()
 {
     // Inicia o canal e envia o comando
@@ -185,8 +166,9 @@ void programinha::MainWindow::on_pushButton_capturar_clicked()
     ssh_channel_close(channel);
     ssh_channel_free(channel);
 }
-
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void programinha::MainWindow::on_pushButton_visualizar_clicked()
 {
     system("gnome-terminal -x sh -c 'rosrun rviz rviz -d $(env HOME)/pepo_ws/src/PEPO/programinha/resources/visualizar.rviz'");
 }
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
