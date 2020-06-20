@@ -15,7 +15,7 @@ find_library(ZeroMQ_LIBRARY
         PATHS ${PC_ZeroMQ_LIBRARY_DIRS}
         )
 
-find_package(catkin REQUIRED COMPONENTS roscpp cv_bridge sensor_msgs std_msgs image_transport pcl_ros image_geometry )
+find_package(catkin REQUIRED COMPONENTS roscpp cv_bridge sensor_msgs std_msgs image_transport pcl_ros image_geometry tf2_ros pcl_conversions)
 find_package(OpenCV REQUIRED)
 find_package(Protobuf REQUIRED)
 find_package(OpenMP REQUIRED)
@@ -33,7 +33,7 @@ include_directories(${ZeroMQ_INCLUDE_DIR})
 include_directories(${OpenMP_INCLUDE_DIRS})
 
 catkin_package(
-  DEPENDS roscpp cv_bridge sensor_msgs std_msgs image_transport pcl_ros image_geometry
+  DEPENDS roscpp cv_bridge sensor_msgs std_msgs image_transport pcl_ros image_geometry tf2_ros pcl_conversions
 )
 
 add_library(protos msgs/imagem.pb.cc msgs/nuvem.pb.cc msgs/arquivos.pb.cc msgs/nvm.pb.cc)

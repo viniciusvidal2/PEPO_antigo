@@ -51,7 +51,6 @@ MainWindow::MainWindow(int argc, char** argv, QWidget *parent)
         ROS_ERROR("Nao foi possivel conectar por SSH.");
     string password = "12";
     rc = ssh_userauth_password(pepo_ssh, "pepo", password.c_str());
-//    rc = ssh_userauth_autopubkey(pepo_ssh, password);
     if(rc == SSH_AUTH_SUCCESS)
         ROS_INFO("Conectamos por SSH com o password.");
     else
@@ -69,8 +68,20 @@ MainWindow::~MainWindow() {}
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void MainWindow::closeEvent(QCloseEvent *event)
 {
+    ssh_channel channel;
+    channel = ssh_channel_new(pepo_ssh);
+    if(ssh_channel_open_session(channel) == SSH_OK){
+        // Enviando comando para matar os nos
+        if(ssh_channel_request_exec(channel, "rosnode kill --all") == SSH_OK)
+            ROS_INFO("Comando de matar todos os nos de ROS foi enviado.");
+        else
+            ROS_INFO("Comando de matar todos os nos de ROS nao pode ser executado.");
+    }
+    ssh_channel_close(channel);
+    ssh_channel_free(channel);
     ssh_disconnect(pepo_ssh);
     ssh_free(pepo_ssh);
+    system("gnome-terminal -x sh -c 'rosnode kill --all'");
     QMainWindow::closeEvent(event);
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -94,11 +105,7 @@ void programinha::MainWindow::on_pushButton_iniciarcaptura_clicked()
         if(ssh_channel_request_exec(channel, comando.c_str()) == SSH_OK)
             ROS_INFO("Comando de inicio do processo foi enviado.");
         else
-            ROS_ERROR("Comando de inicio da captura nao pode ser executado.");
-        // Acertando a camera de acordo com os sliders
-        ssh_channel_request_exec(channel, "v4l2-ctl --set-ctrl=exposure_auto=1");
-        ssh_channel_request_exec(channel, ("v4l2-ctl --set-ctrl=exposure_absolute="+to_string(ui.horizontalSlider_exposure->value())).c_str());
-        ssh_channel_request_exec(channel, ("v4l2-ctl --set-ctrl=brightness="+to_string(ui.horizontalSlider_brightness->value())).c_str());
+            ROS_INFO("Comando de inicio da captura nao pode ser executado.");
     }
     ssh_channel_close(channel);
     ssh_channel_free(channel);
@@ -113,7 +120,7 @@ void programinha::MainWindow::on_pushButton_finalizarcaptura_clicked(){
         if(ssh_channel_request_exec(channel, "rosnode kill --all") == SSH_OK)
             ROS_INFO("Comando de matar todos os nos de ROS foi enviado.");
         else
-            ROS_ERROR("Comando de matar todos os nos de ROS nao pode ser executado.");
+            ROS_INFO("Comando de matar todos os nos de ROS nao pode ser executado.");
     }
     ssh_channel_close(channel);
     ssh_channel_free(channel);
@@ -142,7 +149,13 @@ void programinha::MainWindow::on_horizontalSlider_exposure_sliderReleased(){
     ssh_channel channel;
     channel = ssh_channel_new(pepo_ssh);
     if(ssh_channel_open_session(channel) == SSH_OK){
-        ssh_channel_request_exec(channel, "v4l2-ctl --set-ctrl=exposure_auto=1");
+        if(ssh_channel_request_exec(channel, "v4l2-ctl --set-ctrl=exposure_auto=1") == SSH_OK)
+            ROS_INFO("Tiramos exposicao automatica.");
+    }
+    ssh_channel_close(channel);
+    ssh_channel_free(channel);
+    channel = ssh_channel_new(pepo_ssh);
+    if(ssh_channel_open_session(channel) == SSH_OK){
         if(ssh_channel_request_exec(channel, comando.c_str()) == SSH_OK)
             ROS_INFO("Exposicao alterada com sucesso");
     }
@@ -169,6 +182,6 @@ void programinha::MainWindow::on_pushButton_capturar_clicked()
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void programinha::MainWindow::on_pushButton_visualizar_clicked()
 {
-    system("gnome-terminal -x sh -c 'rosrun rviz rviz -d $(env HOME)/pepo_ws/src/PEPO/programinha/resources/visualizar.rviz'");
+    system("gnome-terminal -x sh -c 'rosrun rviz rviz -d $HOME/pepo_ws/src/PEPO/programinha/resources/visual.rviz'");
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
