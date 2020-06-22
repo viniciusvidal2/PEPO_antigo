@@ -117,7 +117,7 @@ int main(int argc, char **argv)
     Vector3f C;
     Quaternion<float> q;
     // Vetor de offset entre centro do laser e da camera - desenho solid, e foco
-    Vector3f t_off_lc(0.02, 0.0548, 0.023);
+    Vector3f t_off_lc(0.0, 0.0443, 0.023);
     float f = 1130;
     // Vetor de linhas para NVM
     vector<string> linhas_nvm;
@@ -187,15 +187,20 @@ int main(int argc, char **argv)
         ROS_INFO("Refinando registro por ICP ...");
         Matrix4f Ticp = roo.icp(cobj, cnow, 80);
 
-        // Soma a nuvem transformada e poe no lugar certo
+        // Soma a nuvem transformada e poe no lugar certo somente pontos "novos"
         ROS_INFO("Registrando nuvem atual no objeto final ...");
         Matrix4f Tobj = Ticp*Tnow*Tref;
-        *cobj += *cnow;
+        PointCloud<PointTN>::Ptr cnowtemp (new PointCloud<PointTN>);
+        *cnowtemp = *cnow;
+        roo.searchNeighborsKdTree(cnowtemp, cobj);
+        *cobj += *cnowtemp;
         StatisticalOutlierRemoval<PointTN> sor;
         sor.setInputCloud(cobj);
         sor.setMeanK(30);
-        sor.setStddevMulThresh(2.5);
+        sor.setStddevMulThresh(2);
         sor.filter(*cobj);
+
+        // Publicando o resultado atual para visualizacao
         toROSMsg(*cobj, msg);
         msg.header.frame_id = "map";
         msg.header.stamp = ros::Time::now();
@@ -225,6 +230,12 @@ int main(int argc, char **argv)
     sor.setStddevMulThresh(2);
     sor.setInputCloud(cobj);
     sor.filter(*cobj);
+
+    // Publicando o resultado atual para visualizacao
+    toROSMsg(*cobj, msg);
+    msg.header.frame_id = "map";
+    msg.header.stamp = ros::Time::now();
+    pub.publish(msg);
 
     // Salvando a nuvem final do objeto
     savePLYFileBinary<PointTN>(nome_objeto_final, *cobj);
