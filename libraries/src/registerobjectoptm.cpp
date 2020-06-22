@@ -21,7 +21,7 @@ void RegisterObjectOptm::readCloudAndPreProcess(string name, PointCloud<PointTN>
     // Filtro de profundidade para nao pegarmos muito fundo
     PassThrough<PointTN> pass;
     pass.setFilterFieldName("z");
-    pass.setFilterLimits(0, 4); // Z metros de profundidade
+    pass.setFilterLimits(0, 7); // Z metros de profundidade
     // Filtro de ruidos aleatorios
     StatisticalOutlierRemoval<PointTN> sor;
     sor.setMeanK(20);
@@ -53,32 +53,32 @@ void RegisterObjectOptm::readCloudAndPreProcess(string name, PointCloud<PointTN>
     mls.setSearchMethod(tree);
     mls.setSearchRadius(0.20);
     mls.process(*cloud);
-    // Calculando as normais novamente apontando a origem
-    Eigen::Vector3f C = Eigen::Vector3f::Zero();
-    // Inicia estimador de normais
-    search::KdTree<PointTN>::Ptr treen (new search::KdTree<PointTN>());
-    NormalEstimationOMP<PointTN, PointTN> ne;
-    ne.setInputCloud(cloud);
-    ne.setSearchMethod(treen);
-    ne.setKSearch(10);
-    ne.setNumberOfThreads(20);
-    ne.compute(*cloud);
-    // Filtra por normais problematicas
-    std::vector<int> indicesnan;
-    removeNaNNormalsFromPointCloud(*cloud, *cloud, indicesnan);
-    // Forcar virar as normais na marra para a origem
-#pragma omp parallel for
-    for(size_t i=0; i < cloud->size(); i++){
-        Eigen::Vector3f normal, cp;
-        normal << cloud->points[i].normal_x, cloud->points[i].normal_y, cloud->points[i].normal_z;
-        cp     << C(0)-cloud->points[i].x  , C(1)-cloud->points[i].y  , C(2)-cloud->points[i].z  ;
-        float cos_theta = (normal.dot(cp))/(normal.norm()*cp.norm());
-        if(cos_theta <= 0){ // Esta apontando errado, deve inverter
-            cloud->points[i].normal_x = -cloud->points[i].normal_x;
-            cloud->points[i].normal_y = -cloud->points[i].normal_y;
-            cloud->points[i].normal_z = -cloud->points[i].normal_z;
-        }
-    }
+//    // Calculando as normais novamente apontando a origem
+//    Eigen::Vector3f C = Eigen::Vector3f::Zero();
+//    // Inicia estimador de normais
+//    search::KdTree<PointTN>::Ptr treen (new search::KdTree<PointTN>());
+//    NormalEstimationOMP<PointTN, PointTN> ne;
+//    ne.setInputCloud(cloud);
+//    ne.setSearchMethod(treen);
+//    ne.setKSearch(10);
+//    ne.setNumberOfThreads(20);
+//    ne.compute(*cloud);
+//    // Filtra por normais problematicas
+//    std::vector<int> indicesnan;
+//    removeNaNNormalsFromPointCloud(*cloud, *cloud, indicesnan);
+//    // Forcar virar as normais na marra para a origem
+//#pragma omp parallel for
+//    for(size_t i=0; i < cloud->size(); i++){
+//        Eigen::Vector3f normal, cp;
+//        normal << cloud->points[i].normal_x, cloud->points[i].normal_y, cloud->points[i].normal_z;
+//        cp     << C(0)-cloud->points[i].x  , C(1)-cloud->points[i].y  , C(2)-cloud->points[i].z  ;
+//        float cos_theta = (normal.dot(cp))/(normal.norm()*cp.norm());
+//        if(cos_theta <= 0){ // Esta apontando errado, deve inverter
+//            cloud->points[i].normal_x = -cloud->points[i].normal_x;
+//            cloud->points[i].normal_y = -cloud->points[i].normal_y;
+//            cloud->points[i].normal_z = -cloud->points[i].normal_z;
+//        }
+//    }
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
 void RegisterObjectOptm::projectCloudAndAnotatePixels(PointCloud<PointTN>::Ptr cloud, Mat im, PointCloud<PointTN>::Ptr cloud_pix, float f, Vector3f t, MatrixXi &impix){
@@ -194,14 +194,12 @@ void RegisterObjectOptm::matchFeaturesAndFind3DPoints(Mat imref, Mat imnow, Poin
         f2d->detectAndCompute(imnow, Mat(), kpnow, dnow);
         matcher->knnMatch(dref, dnow, matches, 2);
 
-//        cout << "Na tentativa " << tent << " com " << matches.size() << " matches." << endl;
         for (size_t i = 0; i < matches.size(); i++){
             if (matches.at(i).size() >= 2){
                 if (matches.at(i).at(0).distance < 0.7*matches.at(i).at(1).distance)
                     good_matches.push_back(matches.at(i).at(0));
             }
         }
-//        cout << "Na tentativa " << tent << " com " << good_matches.size() << " matches." << endl;
         // Filtrando por distancia media entre os matches
         vector<float> distances (good_matches.size());
         for (int i=0; i < good_matches.size(); i++)
@@ -213,14 +211,11 @@ void RegisterObjectOptm::matchFeaturesAndFind3DPoints(Mat imref, Mat imnow, Poin
             else
                 ++it;
         }
-//        cout << "Na tentativa " << tent << " com " << good_matches.size() << " matches." << endl;
         // Filtrando por angulo das linhas entre os matches
         this->filterMatchesLineCoeff(good_matches, kpref, kpnow, imref.cols, 1);
-//        cout << "Na tentativa " << tent << " com " << good_matches.size() << " matches." << endl;
 
         tent += 1;
         min_hessian *= 0.7;
-//        sigma_thresh = sigma_thresh*0.7; contrast_thresh = contrast_thresh*0.7; edge_thresh = edge_thresh/0.7;
 
         // Achando realmente os keypoints bons e anotando coordenadas
         imrefpts.resize(good_matches.size()); imnowpts.resize(good_matches.size());
@@ -236,9 +231,9 @@ void RegisterObjectOptm::matchFeaturesAndFind3DPoints(Mat imref, Mat imnow, Poin
             for(size_t j=0; j<good_matches.size(); j++){
             int curr_pt_ref = -1, curr_pt_now = -1; // Indice do melhor ponto no momento
             // Na imagem ref ver se naquela redondeza ha um pixel
-            curr_pt_ref = this->searchNeighbors(refpix, imrefpts[j].y, imrefpts[j].x, 8);
+            curr_pt_ref = this->searchNeighbors(refpix, imrefpts[j].y, imrefpts[j].x, 2);
             // Na imagem now ver se naquela redondeza ha um pixel
-            curr_pt_now = this->searchNeighbors(nowpix, imnowpts[j].y, imnowpts[j].x, 8);
+            curr_pt_now = this->searchNeighbors(nowpix, imnowpts[j].y, imnowpts[j].x, 2);
 
             // Se foi encontrado um indice para cada nuvem, anotar isso no vetor de indices de match nas nuvens
             if(curr_pt_ref != -1 && curr_pt_now != -1){
@@ -252,7 +247,6 @@ void RegisterObjectOptm::matchFeaturesAndFind3DPoints(Mat imref, Mat imnow, Poin
                     break;
             } // Fim do for de matches
         }
-//        cout << "Na tentativa " << tent-1 << " com " << matches3d.size() << " matches." << endl;
     } // Fim do while
 
     // Se nao deu certo, avisar com enfase

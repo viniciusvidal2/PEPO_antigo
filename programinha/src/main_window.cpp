@@ -62,6 +62,8 @@ MainWindow::MainWindow(int argc, char** argv, QWidget *parent)
     ui.horizontalSlider_exposure->setValue(1500);
     ui.horizontalSlider_brightness->setValue(80);
 
+    // Iniciando o contador para qual aquisicao estamos
+    contador_aquisicao = 0;
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 MainWindow::~MainWindow() {}
@@ -114,6 +116,16 @@ void programinha::MainWindow::on_pushButton_iniciarcaptura_clicked()
 void programinha::MainWindow::on_pushButton_finalizarcaptura_clicked(){
     // Iniciando canal e secao SSH
     ssh_channel channel;
+    if(ui.radioButton_object->isChecked()){
+        channel = ssh_channel_new(pepo_ssh);
+        if(ssh_channel_open_session(channel) == SSH_OK){
+            // Enviando comando para matar os nos
+            if(ssh_channel_request_exec(channel, "rosservice call /proceder_obj 2") == SSH_OK)
+                ROS_INFO("Fechando a pasta de captura do objeto.");
+        }
+        ssh_channel_close(channel);
+        ssh_channel_free(channel);
+    }
     channel = ssh_channel_new(pepo_ssh);
     if(ssh_channel_open_session(channel) == SSH_OK){
         // Enviando comando para matar os nos
@@ -173,8 +185,13 @@ void programinha::MainWindow::on_pushButton_capturar_clicked()
     ssh_channel channel;
     channel = ssh_channel_new(pepo_ssh);
     if(ssh_channel_open_session(channel) == SSH_OK){
-        if(ssh_channel_request_exec(channel, "rosservice call /proceder_obj 1") == SSH_OK)
+        if(ssh_channel_request_exec(channel, "rosservice call /proceder_obj 1") == SSH_OK){
             ROS_INFO("Enviado pedido de captura");
+            // Aguarda um tempo para o comando ser executado e acusa que esta bem
+            sleep(10);
+            contador_aquisicao++;
+            ROS_INFO("Aquisicao %d feita com sucesso.", contador_aquisicao);
+        }
     }
     ssh_channel_close(channel);
     ssh_channel_free(channel);

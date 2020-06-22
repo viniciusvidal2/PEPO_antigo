@@ -61,6 +61,7 @@ private:
 	QNode qnode;
         ssh_session pepo_ssh;
         int pepo_ssh_port;
+        int contador_aquisicao;
 };
 
 }  // namespace programinha
