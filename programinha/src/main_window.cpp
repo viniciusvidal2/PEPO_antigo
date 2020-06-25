@@ -57,8 +57,8 @@ MainWindow::MainWindow(int argc, char** argv, QWidget *parent)
     QObject::connect(&qnode, SIGNAL(rosShutdown()), this, SLOT(close()));
 
     // Acertando os limites dos sliders
-    ui.horizontalSlider_exposure->setRange(300, 2200);
-    ui.horizontalSlider_brightness->setRange(50, 130);
+    ui.horizontalSlider_exposure->setRange(0, 2200);
+    ui.horizontalSlider_brightness->setRange(0, 130);
     ui.horizontalSlider_exposure->setValue(1500);
     ui.horizontalSlider_brightness->setValue(80);
 

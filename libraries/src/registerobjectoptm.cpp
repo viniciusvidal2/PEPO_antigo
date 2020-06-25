@@ -17,7 +17,7 @@ void RegisterObjectOptm::readCloudAndPreProcess(string name, PointCloud<PointTN>
     loadPLYFile<PointT>(name, *cin);
     // Filtro de voxels para aliviar a entrada
     VoxelGrid<PointT> voxel;
-    float lfsz = 0.02;
+    float lfsz = 0.01;
     voxel.setLeafSize(lfsz, lfsz, lfsz);
     // Filtro de profundidade para nao pegarmos muito fundo
     PassThrough<PointT> pass;
@@ -25,8 +25,8 @@ void RegisterObjectOptm::readCloudAndPreProcess(string name, PointCloud<PointTN>
     pass.setFilterLimits(0, 7); // Z metros de profundidade
     // Filtro de ruidos aleatorios
     StatisticalOutlierRemoval<PointT> sor;
-    sor.setMeanK(20);
-    sor.setStddevMulThresh(2);
+    sor.setMeanK(30);
+    sor.setStddevMulThresh(2.5);
     sor.setNegative(false);
     // Passando filtros
     sor.setInputCloud(cin);
@@ -42,9 +42,9 @@ void RegisterObjectOptm::readCloudAndPreProcess(string name, PointCloud<PointTN>
     MovingLeastSquares<PointT, PointTN> mls;
     mls.setComputeNormals(true);
     mls.setInputCloud(cin);
-    mls.setPolynomialOrder(2);
+    mls.setPolynomialOrder(1);
     mls.setSearchMethod(tree);
-    mls.setSearchRadius(0.14);
+    mls.setSearchRadius(0.05);
     mls.process(*cloud);
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -102,7 +102,7 @@ Matrix4f RegisterObjectOptm::icp(PointCloud<PointTN>::Ptr ctgt, PointCloud<Point
     PointCloud<PointTN>::Ptr tgttemp(new PointCloud<PointTN>);
     PointCloud<PointTN>::Ptr srctemp(new PointCloud<PointTN>);
     VoxelGrid<PointTN> voxel;
-    float lfsz = 0.04;
+    float lfsz = 0.03;
     voxel.setLeafSize(lfsz, lfsz, lfsz);
     voxel.setInputCloud(ctgt);
     voxel.filter(*tgttemp);
@@ -147,7 +147,7 @@ void RegisterObjectOptm::matchFeaturesAndFind3DPoints(Mat imref, Mat imnow, Poin
     vector< DMatch > good_matches;
 
     int tent = 0; // tentativas maximas de achar npontos3d correspondencias bacanas
-    float min_hessian = 2000; //sigma_thresh = 1.6/10, edge_thresh = 10*10, contrast_thresh = 0.04/10;
+    float min_hessian = 1500; //sigma_thresh = 1.6/10, edge_thresh = 10*10, contrast_thresh = 0.04/10;
 
     /// Loop de busca por matches e pontos 3D correspondentes ///
     while(tent < 15 && matches3d.size() <= npontos3d){
@@ -173,7 +173,7 @@ void RegisterObjectOptm::matchFeaturesAndFind3DPoints(Mat imref, Mat imnow, Poin
             distances[i] = good_matches[i].distance;
         float average = accumulate(distances.begin(), distances.end(), 0.0) / distances.size();
         for(vector<DMatch>::iterator it = good_matches.begin(); it!=good_matches.end();){
-            if(it->distance > 0.8*average)
+            if(it->distance > average)
                 good_matches.erase(it);
             else
                 ++it;
@@ -198,11 +198,11 @@ void RegisterObjectOptm::matchFeaturesAndFind3DPoints(Mat imref, Mat imnow, Poin
 //            vector< Point2f > tempnow(imnowpts.begin(), imnowpts.begin()+npontos3d-1), tempref(imrefpts.begin(), imrefpts.begin()+npontos3d-1);
 //            good_matches = good_temp;
 //            imnowpts = tempnow; imrefpts = tempref;
-            // Encontrar a homografia entre as imagens - de now para ref
-            Mat h = findHomography(imnowpts, imrefpts);
-            // Matriz de homografia em Eigen
-            Matrix3f H;
-            cv2eigen(h, H);
+//            // Encontrar a homografia entre as imagens - de now para ref
+//            Mat h = findHomography(imnowpts, imrefpts);
+//            // Matriz de homografia em Eigen
+//            Matrix3f H;
+//            cv2eigen(h, H);
 //            cout << H << endl;
 //            // Projetando os pixels de now para ref
 ////            for(int i=0; i<nowpix.rows(); i++){
@@ -245,9 +245,9 @@ void RegisterObjectOptm::matchFeaturesAndFind3DPoints(Mat imref, Mat imnow, Poin
             for(size_t j=0; j<good_matches.size(); j++){
             int curr_pt_ref = -1, curr_pt_now = -1; // Indice do melhor ponto no momento
             // Na imagem ref ver se naquela redondeza ha um pixel
-            curr_pt_ref = this->searchNeighbors(refpix, imrefpts[j].y, imrefpts[j].x, 1);
+            curr_pt_ref = this->searchNeighbors(refpix, imrefpts[j].y, imrefpts[j].x, 3);
             // Na imagem now ver se naquela redondeza ha um pixel
-            curr_pt_now = this->searchNeighbors(nowpix, imnowpts[j].y, imnowpts[j].x, 1);
+            curr_pt_now = this->searchNeighbors(nowpix, imnowpts[j].y, imnowpts[j].x, 3);
 
             // Se foi encontrado um indice para cada nuvem, anotar isso no vetor de indices de match nas nuvens
             if(curr_pt_ref != -1 && curr_pt_now != -1){
@@ -440,12 +440,12 @@ void RegisterObjectOptm::searchNeighborsKdTree(PointCloud<PointTN>::Ptr cnow, Po
     kdtree.setInputCloud(cobj);
     vector<int> pointIdxRadiusSearch;
     vector<float> pointRadiusSquaredDistance;
-    float radius = 0.02;
+    float radius = 0.03;
     // Nuvem de pontos de indices bons
     PointIndices::Ptr indices (new PointIndices);
     // Para cada ponto, se ja houver vizinhos, nao seguir
     for(size_t i=0; i<cnow->size(); i++){
-        if(kdtree.radiusSearch(cnow->points[i], radius, pointIdxRadiusSearch, pointRadiusSquaredDistance) <= 1)
+        if(kdtree.radiusSearch(cnow->points[i], radius, pointIdxRadiusSearch, pointRadiusSquaredDistance) <= 80)
             indices->indices.push_back(i);
     }
     // Filtrar na nuvem now so os indices que estao sem vizinhos na obj
