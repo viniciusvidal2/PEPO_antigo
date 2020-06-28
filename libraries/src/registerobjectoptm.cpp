@@ -17,7 +17,7 @@ void RegisterObjectOptm::readCloudAndPreProcess(string name, PointCloud<PointTN>
     loadPLYFile<PointT>(name, *cin);
     // Filtro de voxels para aliviar a entrada
     VoxelGrid<PointT> voxel;
-    float lfsz = 0.01;
+    float lfsz = 0.04;
     voxel.setLeafSize(lfsz, lfsz, lfsz);
     // Filtro de profundidade para nao pegarmos muito fundo
     PassThrough<PointT> pass;
@@ -101,13 +101,15 @@ Matrix4f RegisterObjectOptm::icp(PointCloud<PointTN>::Ptr ctgt, PointCloud<Point
     // Reduzindo ainda mais as nuvens pra nao dar trabalho assim ao icp
     PointCloud<PointTN>::Ptr tgttemp(new PointCloud<PointTN>);
     PointCloud<PointTN>::Ptr srctemp(new PointCloud<PointTN>);
-    VoxelGrid<PointTN> voxel;
-    float lfsz = 0.03;
-    voxel.setLeafSize(lfsz, lfsz, lfsz);
-    voxel.setInputCloud(ctgt);
-    voxel.filter(*tgttemp);
-    voxel.setInputCloud(csrc);
-    voxel.filter(*srctemp);
+//    VoxelGrid<PointTN> voxel;
+    float lfsz = 0.05;
+//    voxel.setLeafSize(lfsz, lfsz, lfsz);
+//    voxel.setInputCloud(ctgt);
+//    voxel.filter(*tgttemp);
+//    voxel.setInputCloud(csrc);
+//    voxel.filter(*srctemp);
+    *tgttemp = *ctgt;
+    *srctemp = *csrc;
 
     // Criando o otimizador de ICP comum
     GeneralizedIterativeClosestPoint<PointTN, PointTN> icp;
@@ -245,9 +247,9 @@ void RegisterObjectOptm::matchFeaturesAndFind3DPoints(Mat imref, Mat imnow, Poin
             for(size_t j=0; j<good_matches.size(); j++){
             int curr_pt_ref = -1, curr_pt_now = -1; // Indice do melhor ponto no momento
             // Na imagem ref ver se naquela redondeza ha um pixel
-            curr_pt_ref = this->searchNeighbors(refpix, imrefpts[j].y, imrefpts[j].x, 3);
+            curr_pt_ref = this->searchNeighbors(refpix, imrefpts[j].y, imrefpts[j].x, 5);
             // Na imagem now ver se naquela redondeza ha um pixel
-            curr_pt_now = this->searchNeighbors(nowpix, imnowpts[j].y, imnowpts[j].x, 3);
+            curr_pt_now = this->searchNeighbors(nowpix, imnowpts[j].y, imnowpts[j].x, 5);
 
             // Se foi encontrado um indice para cada nuvem, anotar isso no vetor de indices de match nas nuvens
             if(curr_pt_ref != -1 && curr_pt_now != -1){
@@ -434,18 +436,23 @@ int RegisterObjectOptm::searchNeighbors(MatrixXi im, int r, int c, int l){
     return -1;
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
-void RegisterObjectOptm::searchNeighborsKdTree(PointCloud<PointTN>::Ptr cnow, PointCloud<PointTN>::Ptr cobj){
+void RegisterObjectOptm::searchNeighborsKdTree(PointCloud<PointTN>::Ptr cnow, PointCloud<PointTN>::Ptr cobj, float rate){
     // Iniciar kdtree de busca
     KdTreeFLANN<PointTN> kdtree;
     kdtree.setInputCloud(cobj);
     vector<int> pointIdxRadiusSearch;
     vector<float> pointRadiusSquaredDistance;
-    float radius = 0.03;
+    float radius = 0.05;
     // Nuvem de pontos de indices bons
     PointIndices::Ptr indices (new PointIndices);
+    float average_neighbors = 0, sumn = 0;
+    // Achando quantidade media de vizinhos naquele raio
+    for(size_t i=0; i<cnow->size(); i++)
+        sumn += kdtree.radiusSearch(cnow->points[i], radius, pointIdxRadiusSearch, pointRadiusSquaredDistance);
+    average_neighbors = sumn/float(cnow->size());
     // Para cada ponto, se ja houver vizinhos, nao seguir
     for(size_t i=0; i<cnow->size(); i++){
-        if(kdtree.radiusSearch(cnow->points[i], radius, pointIdxRadiusSearch, pointRadiusSquaredDistance) <= 80)
+        if(kdtree.radiusSearch(cnow->points[i], radius, pointIdxRadiusSearch, pointRadiusSquaredDistance) <= rate*average_neighbors)
             indices->indices.push_back(i);
     }
     // Filtrar na nuvem now so os indices que estao sem vizinhos na obj

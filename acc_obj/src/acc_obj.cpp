@@ -117,7 +117,7 @@ int main(int argc, char **argv)
     Vector3f C;
     Quaternion<float> q;
     // Vetor de offset entre centro do laser e da camera - desenho solid, e foco
-    Vector3f t_off_lc(0.0, 0.0443, 0.023);
+    Vector3f t_off_lc(0.00, 0.0443, 0.023);
     float f = 1130;
     // Vetor de linhas para NVM
     vector<string> linhas_nvm;
@@ -162,7 +162,7 @@ int main(int argc, char **argv)
         imnow = imread(pasta+nomes_imagens[i]);
         imnowpix = MatrixXi::Constant(imnow.rows, imnow.cols, -1);
 
-        // Projetar nuvem e salvar nuvem auxiliar de pixels        
+        // Projetar nuvem e salvar nuvem auxiliar de pixels
         ROS_INFO("Projetando para otimizar cores e anotar os pixels ...");
         roo.projectCloudAndAnotatePixels(cnow, imnow, cpixnow, f, t_off_lc, imnowpix);
 
@@ -176,51 +176,55 @@ int main(int argc, char **argv)
         roo.matchFeaturesAndFind3DPoints(imref, imnow, cpixref, cpixnow, 70, matches3Dindices, imrefpix, imnowpix);
         ROS_INFO("Foram obtidas %zu correspondencias 3D.", matches3Dindices.size());
 
-        // Rodar a otimizacao da transformada por SVD
-        ROS_INFO("Otimizando a transformacao relativa das nuvens por SVD ...");
-        Tnow = roo.optmizeTransformSVD(cref, cnow, matches3Dindices);
+        // Continuamos somente se a imagem forneceu matches
+        if(matches3Dindices.size() > 0){
+            // Rodar a otimizacao da transformada por SVD
+            ROS_INFO("Otimizando a transformacao relativa das nuvens por SVD ...");
+            Tnow = roo.optmizeTransformSVD(cref, cnow, matches3Dindices);
 
-        // Transforma a nuvem atual com a transformacao encontrada
-        transformPointCloudWithNormals<PointTN>(*cnow, *cnow, Tnow);
+            // Transforma a nuvem atual com a transformacao encontrada
+            transformPointCloudWithNormals<PointTN>(*cnow, *cnow, Tnow);
 
-        // Refina a transformacao por ICP com poucas iteracoes
-        ROS_INFO("Refinando registro por ICP ...");
-        Matrix4f Ticp = roo.icp(cobj, cnow, 80);
+            // Refina a transformacao por ICP com poucas iteracoes
+            ROS_INFO("Refinando registro por ICP ...");
+            Matrix4f Ticp = roo.icp(cobj, cnow, 50);
 
-        // Soma a nuvem transformada e poe no lugar certo somente pontos "novos"
-        ROS_INFO("Registrando nuvem atual no objeto final ...");
-        Matrix4f Tobj = Ticp*Tnow*Tref;
-        PointCloud<PointTN>::Ptr cnowtemp (new PointCloud<PointTN>);
-        *cnowtemp = *cnow;
-        roo.searchNeighborsKdTree(cnowtemp, cobj);
-        *cobj += *cnowtemp;
-        StatisticalOutlierRemoval<PointTN> sor;
-        sor.setInputCloud(cobj);
-        sor.setMeanK(30);
-        sor.setStddevMulThresh(2);
-        sor.filter(*cobj);
+            // Soma a nuvem transformada e poe no lugar certo somente pontos "novos"
+            ROS_INFO("Registrando nuvem atual no objeto final ...");
+            Matrix4f Tobj = Ticp*Tnow*Tref;
+            PointCloud<PointTN>::Ptr cnowtemp (new PointCloud<PointTN>);
+            *cnowtemp = *cnow;
+            roo.searchNeighborsKdTree(cnowtemp, cobj, 0.6);
+            *cobj += *cnowtemp;
+            StatisticalOutlierRemoval<PointTN> sor;
+            sor.setInputCloud(cobj);
+            sor.setMeanK(30);
+            sor.setStddevMulThresh(2);
+            sor.filter(*cobj);
 
-        // Publicando o resultado atual para visualizacao
-        toROSMsg(*cobj, msg);
-        msg.header.frame_id = "map";
-        msg.header.stamp = ros::Time::now();
-        pub.publish(msg);
+            // Publicando o resultado atual para visualizacao
+            toROSMsg(*cobj, msg);
+            msg.header.frame_id = "map";
+            msg.header.stamp = ros::Time::now();
+            pub.publish(msg);
 
-        // Calcula a pose da camera e escreve no NVM
-        ROS_INFO("Escrevendo no NVM ...");
-        Matrix4f Tcam = Matrix4f::Identity();
-        Tcam.block<3,1>(0, 3) = t_off_lc;
-        Tcam = Tobj*Tcam;
-        C = Tcam.block<3,1>(0, 3);
-        q = Tcam.block<3,3>(0, 0).transpose();
-        linhas_nvm.push_back(pc.escreve_linha_imagem(f, nomes_imagens[i], C, q));
+            // Calcula a pose da camera e escreve no NVM
+            ROS_INFO("Escrevendo no NVM ...");
+            Matrix4f Tcam = Matrix4f::Identity();
+            Tcam.block<3,1>(0, 3) = t_off_lc;
+            Tcam = Tobj*Tcam;
+            C = Tcam.block<3,1>(0, 3);
+            q = Tcam.block<3,3>(0, 0).transpose();
+            linhas_nvm.push_back(pc.escreve_linha_imagem(f, nomes_imagens[i], C, q));
+            pc.compileFinalNVM(linhas_nvm);
 
-        // Atualiza as referencias e parte para a proxima aquisicao
-        *cref = *cnow;
-        *cpixref = *cpixnow; // Nuvem de indices ja esta referenciado a origem
-        imrefpix = imnowpix;
-        Tref = Tobj;
-        imref = imnow;
+            // Atualiza as referencias e parte para a proxima aquisicao
+            *cref = *cnow;
+            *cpixref = *cpixnow; // Nuvem de indices ja esta referenciado a origem
+            imrefpix = imnowpix;
+            Tref = Tobj;
+            imref = imnow;
+        }
     }
 
     // Filtrando novamente objeto final
