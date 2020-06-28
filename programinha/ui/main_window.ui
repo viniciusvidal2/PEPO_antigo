@@ -123,6 +123,32 @@
           <string>Finalizar captura</string>
          </property>
         </widget>
+        <widget class="QPushButton" name="pushButton_transferircaptura">
+         <property name="geometry">
+          <rect>
+           <x>20</x>
+           <y>200</y>
+           <width>171</width>
+           <height>25</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Transferir captura</string>
+         </property>
+        </widget>
+        <widget class="QPushButton" name="pushButton">
+         <property name="geometry">
+          <rect>
+           <x>330</x>
+           <y>220</y>
+           <width>89</width>
+           <height>25</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>PushButton</string>
+         </property>
+        </widget>
        </widget>
       </item>
       <item>
@@ -241,6 +267,29 @@
        </property>
        <property name="text">
         <string>Exposure</string>
+       </property>
+      </widget>
+      <widget class="QListWidget" name="listWidget">
+       <property name="geometry">
+        <rect>
+         <x>35</x>
+         <y>271</y>
+         <width>381</width>
+         <height>361</height>
+        </rect>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label">
+       <property name="geometry">
+        <rect>
+         <x>40</x>
+         <y>250</y>
+         <width>131</width>
+         <height>17</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Log de operacao:</string>
        </property>
       </widget>
      </widget>

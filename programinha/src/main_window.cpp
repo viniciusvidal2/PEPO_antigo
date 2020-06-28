@@ -30,25 +30,6 @@ MainWindow::MainWindow(int argc, char** argv, QWidget *parent)
     : QMainWindow(parent)
     , qnode(argc,argv)
 {
-    // Acertando o SSH
-    pepo_ssh = ssh_new();
-    int verbosity = SSH_LOG_WARNING;
-    ssh_options_set(pepo_ssh, SSH_OPTIONS_HOST, "192.168.0.101");
-    ssh_options_set(pepo_ssh, SSH_OPTIONS_LOG_VERBOSITY, &verbosity);
-    ssh_options_set(pepo_ssh, SSH_OPTIONS_PORT, &pepo_ssh_port);
-    ssh_options_set(pepo_ssh, SSH_OPTIONS_USER, "pepo");
-    int rc = ssh_connect(pepo_ssh);
-    if(rc == SSH_OK)
-        ROS_INFO("Conectamos por SSH.");
-    else
-        ROS_ERROR("Nao foi possivel conectar por SSH.");
-    string password = "12";
-    rc = ssh_userauth_password(pepo_ssh, "pepo", password.c_str());
-    if(rc == SSH_AUTH_SUCCESS)
-        ROS_INFO("Conectamos por SSH com o password.");
-    else
-        ROS_ERROR("Nao foi possivel conectar por SSH com o password.");
-
     ui.setupUi(this); // Calling this incidentally connects all ui's triggers to on_...() callbacks in this class.
     QObject::connect(ui.actionAbout_Qt, SIGNAL(triggered(bool)), qApp, SLOT(aboutQt())); // qApp is a global variable for the application
 
@@ -64,6 +45,25 @@ MainWindow::MainWindow(int argc, char** argv, QWidget *parent)
 
     // Iniciando o contador para qual aquisicao estamos
     contador_aquisicao = 0;
+
+    // Acertando o SSH
+    pepo_ssh = ssh_new();
+    int verbosity = SSH_LOG_NOLOG;
+    ssh_options_set(pepo_ssh, SSH_OPTIONS_HOST, "192.168.0.101");
+    ssh_options_set(pepo_ssh, SSH_OPTIONS_LOG_VERBOSITY, &verbosity);
+    ssh_options_set(pepo_ssh, SSH_OPTIONS_PORT, &pepo_ssh_port);
+    ssh_options_set(pepo_ssh, SSH_OPTIONS_USER, "pepo");
+    int rc = ssh_connect(pepo_ssh);
+    if(rc == SSH_OK)
+        ui.listWidget->addItem(QString::fromStdString("Conectamos por SSH."));
+    else
+        ui.listWidget->addItem(QString::fromStdString("Nao foi possivel conectar por SSH."));
+    string password = "12";
+    rc = ssh_userauth_password(pepo_ssh, "pepo", password.c_str());
+    if(rc == SSH_AUTH_SUCCESS)
+        ui.listWidget->addItem(QString::fromStdString("Conectamos por SSH com o password."));
+    else
+        ui.listWidget->addItem(QString::fromStdString("Nao foi possivel conectar por SSH com o password."));
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 MainWindow::~MainWindow() {}
@@ -75,9 +75,9 @@ void MainWindow::closeEvent(QCloseEvent *event)
     if(ssh_channel_open_session(channel) == SSH_OK){
         // Enviando comando para matar os nos
         if(ssh_channel_request_exec(channel, "rosnode kill --all") == SSH_OK)
-            ROS_INFO("Comando de matar todos os nos de ROS foi enviado.");
+            ui.listWidget->addItem(QString::fromStdString("Comando de matar todos os nos de ROS foi enviado."));
         else
-            ROS_INFO("Comando de matar todos os nos de ROS nao pode ser executado.");
+            ui.listWidget->addItem(QString::fromStdString("Comando de matar todos os nos de ROS nao pode ser executado."));
     }
     ssh_channel_close(channel);
     ssh_channel_free(channel);
@@ -100,14 +100,22 @@ void programinha::MainWindow::on_pushButton_iniciarcaptura_clicked()
     else if(ui.radioButton_object->isChecked())
         comando = "roslaunch pepo_obj pepo_obj.launch pasta:="+pasta;
 
-    // Iniciando canal e secao SSH
+    // Iniciando canal e matando o que ja esta acontecendo
     ssh_channel channel;
     channel = ssh_channel_new(pepo_ssh);
     if(ssh_channel_open_session(channel) == SSH_OK){
+        if(ssh_channel_request_exec(channel, "rosnode kill --all") == SSH_OK)
+            ui.listWidget->addItem(QString::fromStdString("Reiniciando o sistema..."));
+    }
+    ssh_channel_close(channel);
+    ssh_channel_free(channel);
+    // Inicando o processo em si
+    channel = ssh_channel_new(pepo_ssh);
+    if(ssh_channel_open_session(channel) == SSH_OK){
         if(ssh_channel_request_exec(channel, comando.c_str()) == SSH_OK)
-            ROS_INFO("Comando de inicio do processo foi enviado.");
+            ui.listWidget->addItem(QString::fromStdString("Comando de inicio do processo foi enviado."));
         else
-            ROS_INFO("Comando de inicio da captura nao pode ser executado.");
+            ui.listWidget->addItem(QString::fromStdString("Comando de inicio da captura nao pode ser executado."));
     }
     ssh_channel_close(channel);
     ssh_channel_free(channel);
@@ -121,7 +129,7 @@ void programinha::MainWindow::on_pushButton_finalizarcaptura_clicked(){
         if(ssh_channel_open_session(channel) == SSH_OK){
             // Enviando comando para matar os nos
             if(ssh_channel_request_exec(channel, "rosservice call /proceder_obj 2") == SSH_OK)
-                ROS_INFO("Fechando a pasta de captura do objeto.");
+                ui.listWidget->addItem(QString::fromStdString("Fechando a pasta de captura do objeto."));
         }
         ssh_channel_close(channel);
         ssh_channel_free(channel);
@@ -130,9 +138,9 @@ void programinha::MainWindow::on_pushButton_finalizarcaptura_clicked(){
     if(ssh_channel_open_session(channel) == SSH_OK){
         // Enviando comando para matar os nos
         if(ssh_channel_request_exec(channel, "rosnode kill --all") == SSH_OK)
-            ROS_INFO("Comando de matar todos os nos de ROS foi enviado.");
+            ui.listWidget->addItem(QString::fromStdString("Comando de matar todos os nos de ROS foi enviado."));
         else
-            ROS_INFO("Comando de matar todos os nos de ROS nao pode ser executado.");
+            ui.listWidget->addItem(QString::fromStdString("Comando de matar todos os nos de ROS nao pode ser executado."));
     }
     ssh_channel_close(channel);
     ssh_channel_free(channel);
@@ -147,7 +155,7 @@ void programinha::MainWindow::on_horizontalSlider_brightness_sliderReleased(){
     channel = ssh_channel_new(pepo_ssh);
     if(ssh_channel_open_session(channel) == SSH_OK){
         if(ssh_channel_request_exec(channel, comando.c_str()) == SSH_OK)
-            ROS_INFO("Brilho alterado com sucesso");
+            ui.listWidget->addItem(QString::fromStdString("Brilho alterado com sucesso para "+to_string(valor)+"."));
     }
     ssh_channel_close(channel);
     ssh_channel_free(channel);
@@ -162,14 +170,14 @@ void programinha::MainWindow::on_horizontalSlider_exposure_sliderReleased(){
     channel = ssh_channel_new(pepo_ssh);
     if(ssh_channel_open_session(channel) == SSH_OK){
         if(ssh_channel_request_exec(channel, "v4l2-ctl --set-ctrl=exposure_auto=1") == SSH_OK)
-            ROS_INFO("Tiramos exposicao automatica.");
+            ui.listWidget->addItem(QString::fromStdString("Tiramos exposicao automatica."));
     }
     ssh_channel_close(channel);
     ssh_channel_free(channel);
     channel = ssh_channel_new(pepo_ssh);
     if(ssh_channel_open_session(channel) == SSH_OK){
         if(ssh_channel_request_exec(channel, comando.c_str()) == SSH_OK)
-            ROS_INFO("Exposicao alterada com sucesso");
+            ui.listWidget->addItem(QString::fromStdString("Exposicao alterada com sucesso para "+to_string(valor)+"."));
     }
     ssh_channel_close(channel);
     ssh_channel_free(channel);
@@ -186,11 +194,11 @@ void programinha::MainWindow::on_pushButton_capturar_clicked()
     channel = ssh_channel_new(pepo_ssh);
     if(ssh_channel_open_session(channel) == SSH_OK){
         if(ssh_channel_request_exec(channel, "rosservice call /proceder_obj 1") == SSH_OK){
-            ROS_INFO("Enviado pedido de captura");
+            ui.listWidget->addItem(QString::fromStdString("Enviado pedido de captura"));
             // Aguarda um tempo para o comando ser executado e acusa que esta bem
             sleep(10);
             contador_aquisicao++;
-            ROS_INFO("Aquisicao %d feita com sucesso.", contador_aquisicao);
+            ui.listWidget->addItem(QString::fromStdString("Aquisicao "+to_string(contador_aquisicao)+" feita com sucesso."));
         }
     }
     ssh_channel_close(channel);
@@ -202,3 +210,17 @@ void programinha::MainWindow::on_pushButton_visualizar_clicked()
     system("gnome-terminal -x sh -c 'rosrun rviz rviz -d $HOME/pepo_ws/src/PEPO/programinha/resources/visual.rviz'");
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void programinha::MainWindow::on_pushButton_transferircaptura_clicked(){
+    // Inicia o canal e envia o comando
+//    ssh_channel channel;
+//    channel = ssh_channel_new(pepo_ssh);
+    string comando = "ssh pepo@192.168.0.101 'roslaunch communication envia_dados_zmq.launch pasta_dados:="+ui.lineEdit_pasta->text().toStdString()+"' ";
+//    if(ssh_channel_open_session(channel) == SSH_OK){
+//        if(ssh_channel_request_exec(channel, comando.c_str()) == SSH_OK)
+//            ui.listWidget->addItem(QString::fromStdString("Transferindo a pasta ")+ui.lineEdit_pasta->text()+QString::fromStdString(" para o Desktop."));
+//    }
+//    ssh_channel_close(channel);
+//    ssh_channel_free(channel);
+    system(("gnome-terminal -x sh -c '"+comando+"'").c_str());
+    system("gnome-terminal -x sh -c 'roslaunch zmq_ros recebe_dados_zmq.launch'");
+}

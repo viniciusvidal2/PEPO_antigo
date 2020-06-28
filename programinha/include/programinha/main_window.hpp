@@ -48,6 +48,7 @@ private Q_SLOTS:
         void on_pushButton_iniciarcaptura_clicked();
         void on_pushButton_finalizarcaptura_clicked();
         void on_pushButton_cameraimagemcalibrar_clicked();
+        void on_pushButton_transferircaptura_clicked();
 
         void on_horizontalSlider_brightness_sliderReleased();
         void on_horizontalSlider_exposure_sliderReleased();
