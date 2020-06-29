@@ -34,6 +34,7 @@
 #include <pcl/features/normal_3d_omp.h>
 #include <pcl/features/normal_3d.h>
 #include <pcl/filters/conditional_removal.h>
+#include <pcl/filters/passthrough.h>
 #include <pcl/filters/extract_indices.h>
 #include <pcl/filters/radius_outlier_removal.h>
 #include <pcl/filters/statistical_outlier_removal.h>

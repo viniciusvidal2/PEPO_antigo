@@ -361,7 +361,7 @@ void ProcessCloud::filterCloudDepthCovariance(PointCloud<PointTN>::Ptr cloud, in
     extract.filter(*cloud);
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
-void ProcessCloud::preprocess(PointCloud::Ptr cin, PointCloud::Ptr out){
+void ProcessCloud::preprocess(PointCloud<PointT>::Ptr cin, PointCloud<PointTN>::Ptr out){
     // Filtro de voxels para aliviar a entrada
     VoxelGrid<PointT> voxel;
     float lfsz = 0.02;

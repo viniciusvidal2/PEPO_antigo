@@ -12,26 +12,19 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/opencv.hpp>
-#include <opencv2/core.hpp>
-#include <opencv2/core/eigen.hpp>
-#include <opencv2/imgcodecs.hpp>
-#include <opencv2/features2d.hpp>
 #include <opencv2/xfeatures2d.hpp>
 
-#include "../msgs/imagem.pb.h"
-#include "../msgs/nuvem.pb.h"
-#include "../msgs/arquivos.pb.h"
-#include "../msgs/nvm.pb.h"
-#include "google/protobuf/io/coded_stream.h"
-#include "google/protobuf/io/zero_copy_stream.h"
+#include <Eigen/Geometry>
+#include <Eigen/Dense>
+#include <Eigen/Core>
 
 #include <zmq.hpp>
 #include <zmq_utils.h>
 
-using namespace ImagemMsgProto;
 using namespace cv;
 using namespace std;
 using namespace zmq;
+using namespace Eigen;
 
 int main(int argc, char **argv)
 {

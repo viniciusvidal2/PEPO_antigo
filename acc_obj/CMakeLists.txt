@@ -5,7 +5,7 @@ project(acc_obj)
 add_compile_options(-std=c++11)
 
 find_package(OpenCV REQUIRED)
-find_package(catkin REQUIRED COMPONENTS roscpp cv_bridge sensor_msgs std_msgs nav_msgs pcl_ros tf2_ros pcl_conversions)
+find_package(catkin REQUIRED COMPONENTS roscpp cv_bridge sensor_msgs std_msgs nav_msgs pcl_ros tf2_ros pcl_conversions message_generation)
 find_package(OpenMP REQUIRED)
 if(OPENMP_FOUND)
   message(STATUS "OPENMP FOUND")
@@ -18,18 +18,23 @@ add_service_files(
   comandoAquisitar.srv
 )
 
+generate_messages(
+  DEPENDENCIES
+  std_msgs
+)
+
 include_directories(${catkin_INCLUDE_DIRS})
 include_directories(${OpenCV_INCLUDE_DIRS})
 include_directories(${PCL_INCLUDE_DIRS})
 include_directories(../libraries/include)
 include_directories(${OpenMP_INCLUDE_DIRS})
 
-catkin_package(CATKIN_DEPENDS DEPENDS roscpp cv_bridge sensor_msgs std_msgs nav_msgs pcl_ros tf2_ros pcl_conversions)
+catkin_package(CATKIN_DEPENDS DEPENDS roscpp cv_bridge sensor_msgs std_msgs nav_msgs pcl_ros tf2_ros pcl_conversions message_generation)
 
-add_executable(acc_cloud_node src/acc_cloud.cpp ../libraries/src/processcloud.cpp)
-target_compile_options(acc_cloud_node PRIVATE ${OpenMP_FLAGS})
-add_dependencies(acc_cloud_node ${catkin_EXPORTED_TARGETS})
-target_link_libraries(acc_cloud_node ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS} ${OpenMP_LIBS})
+#add_executable(acc_cloud_node src/acc_cloud.cpp ../libraries/src/processcloud.cpp)
+#target_compile_options(acc_cloud_node PRIVATE ${OpenMP_FLAGS})
+#add_dependencies(acc_cloud_node ${catkin_EXPORTED_TARGETS})
+#target_link_libraries(acc_cloud_node ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS} ${OpenMP_LIBS})
 
 add_executable(acc_obj_node src/acc_obj.cpp ../libraries/src/registerobjectoptm.cpp ../libraries/src/processcloud.cpp)
 target_compile_options(acc_obj_node PRIVATE ${OpenMP_FLAGS})

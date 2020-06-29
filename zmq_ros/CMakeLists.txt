@@ -46,7 +46,7 @@ target_link_libraries(recebe_nuvem ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV
 add_executable(recebe_imagem src/recebe_imagem.cpp)
 target_compile_options(recebe_imagem PRIVATE ${OpenMP_FLAGS})
 add_dependencies(recebe_imagem ${catkin_EXPORTED_TARGETS})
-target_link_libraries(recebe_imagem ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS} ${PROTOBUF_LIBRARIES} protos ${ZeroMQ_LIBRARY} ${OpenMP_LIBS})
+target_link_libraries(recebe_imagem ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS} ${PROTOBUF_LIBRARIES} ${ZeroMQ_LIBRARY} ${OpenMP_LIBS})
 
 add_executable(recebe_dados_zmq src/recebe_dados_zmq.cpp)
 target_compile_options(recebe_dados_zmq PRIVATE ${OpenMP_FLAGS})
