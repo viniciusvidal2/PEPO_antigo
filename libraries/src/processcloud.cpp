@@ -361,6 +361,40 @@ void ProcessCloud::filterCloudDepthCovariance(PointCloud<PointTN>::Ptr cloud, in
     extract.filter(*cloud);
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
+void ProcessCloud::preprocess(PointCloud::Ptr cin, PointCloud::Ptr out){
+    // Filtro de voxels para aliviar a entrada
+    VoxelGrid<PointT> voxel;
+    float lfsz = 0.02;
+    voxel.setLeafSize(lfsz, lfsz, lfsz);
+    // Filtro de profundidade para nao pegarmos muito fundo
+    PassThrough<PointT> pass;
+    pass.setFilterFieldName("z");
+    pass.setFilterLimits(0, 7); // Z metros de profundidade
+    // Filtro de ruidos aleatorios
+    StatisticalOutlierRemoval<PointT> sor;
+    sor.setMeanK(30);
+    sor.setStddevMulThresh(2.5);
+    sor.setNegative(false);
+    // Passando filtros
+    sor.setInputCloud(cin);
+    sor.filter(*cin);
+    voxel.setInputCloud(cin);
+    voxel.filter(*cin);
+    pass.setInputCloud(cin);
+    pass.filter(*cin);
+    sor.setInputCloud(cin);
+    sor.filter(*cin);
+    // Passando polinomio pra suavizar a parada
+    pcl::search::KdTree<PointT>::Ptr tree (new pcl::search::KdTree<PointT>());
+    MovingLeastSquares<PointT, PointTN> mls;
+    mls.setComputeNormals(true);
+    mls.setInputCloud(cin);
+    mls.setPolynomialOrder(1);
+    mls.setSearchMethod(tree);
+    mls.setSearchRadius(0.05);
+    mls.process(*out);
+}
+/////////////////////////////////////////////////////////////////////////////////////////////////
 void ProcessCloud::saveCloud(PointCloud<PointTN>::Ptr nuvem, std::string nome){
     std::string nome_nuvem = pasta + nome + ".ply";
     savePLYFileASCII<PointTN>(nome_nuvem, *nuvem);

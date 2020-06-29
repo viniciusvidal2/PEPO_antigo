@@ -13,6 +13,11 @@ if(OPENMP_FOUND)
   set(OpenMP_LIBS gomp)
 endif()
 
+add_service_files(
+  FILES
+  comandoAquisitar.srv
+)
+
 include_directories(${catkin_INCLUDE_DIRS})
 include_directories(${OpenCV_INCLUDE_DIRS})
 include_directories(${PCL_INCLUDE_DIRS})
@@ -30,3 +35,8 @@ add_executable(acc_obj_node src/acc_obj.cpp ../libraries/src/registerobjectoptm.
 target_compile_options(acc_obj_node PRIVATE ${OpenMP_FLAGS})
 add_dependencies(acc_obj_node ${catkin_EXPORTED_TARGETS})
 target_link_libraries(acc_obj_node ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS} ${OpenMP_LIBS})
+
+add_executable(acc_obj_online_node src/acc_obj_online.cpp ../libraries/src/registerobjectoptm.cpp ../libraries/src/processcloud.cpp)
+target_compile_options(acc_obj_online_node PRIVATE ${OpenMP_FLAGS})
+add_dependencies(acc_obj_online_node ${catkin_EXPORTED_TARGETS})
+target_link_libraries(acc_obj_online_node ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBS} ${OpenMP_LIBS})

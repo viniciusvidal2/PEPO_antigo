@@ -89,6 +89,7 @@ public:
   void saveImage(cv::Mat img, std::string nome);
   void filterCloudDepthCovariance(PointCloud<PointT >::Ptr cloud, int kn, float thresh);
   void filterCloudDepthCovariance(PointCloud<PointTN>::Ptr cloud, int kn, float thresh);
+  void preprocess(PointCloud<PointT>::Ptr cin, PointCloud<PointTN>::Ptr out);
 
   Mat projectCloudToLaserCenter(PointCloud<PointTN>::Ptr cloud, float fx, float fy, float tx, float ty, Size s);
   void colorCloudWithCalibratedImage(PointCloud<PointTN>::Ptr cloud_in, Mat image, float fx, float fy);
@@ -98,6 +99,7 @@ public:
   void writeNVM(std::string nome, std::string nome_imagem, Eigen::VectorXf params);
   void compileFinalNVM(vector<std::string> linhas);
   std::string escreve_linha_imagem(float foco, std::string nome, Eigen::MatrixXf C, Eigen::Quaternion<float> q);
+
 
 private:
   /// Metodos

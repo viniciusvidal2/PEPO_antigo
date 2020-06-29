@@ -165,8 +165,15 @@ void RegisterObjectOptm::matchFeaturesAndFind3DPoints(Mat imref, Mat imnow, Poin
 
         for (size_t i = 0; i < matches.size(); i++){
             if (matches.at(i).size() >= 2){
-                if (matches.at(i).at(0).distance < 0.7*matches.at(i).at(1).distance)
-                    good_matches.push_back(matches.at(i).at(0));
+                if (matches.at(i).at(0).distance < 0.7*matches.at(i).at(1).distance){ // Se e bastante unica frente a segunda colocada
+                    float dref, dnow; // Distancias dos pontos aos centros das imagens
+                    Point2f pref, pnow;
+                    pref = kpref[matches.at(i).at(0).queryIdx].pt; pnow = kpnow[matches.at(i).at(0).trainIdx].pt;
+                    dref = sqrt( pow(pref.x - imref.cols/2, 2) + pow(pref.y - imref.rows, 2) );
+                    dnow = sqrt( pow(pnow.x - imnow.cols/2, 2) + pow(pnow.y - imnow.rows, 2) );
+                    if(dref < 0.8*imref.rows/2 && dnow < 0.8*imnow.rows/2) // Se esta localizada mais ao centro da imagem
+                        good_matches.push_back(matches.at(i).at(0));
+                }
             }
         }
         // Filtrando por distancia media entre os matches
