@@ -26,6 +26,9 @@
      <layout class="QVBoxLayout" name="verticalLayout">
       <item>
        <widget class="QGroupBox" name="groupBox_iniciossh">
+        <property name="autoFillBackground">
+         <bool>false</bool>
+        </property>
         <property name="title">
          <string>Inicio SSH</string>
         </property>
@@ -127,26 +130,13 @@
          <property name="geometry">
           <rect>
            <x>20</x>
-           <y>200</y>
+           <y>280</y>
            <width>171</width>
            <height>25</height>
           </rect>
          </property>
          <property name="text">
           <string>Transferir captura</string>
-         </property>
-        </widget>
-        <widget class="QPushButton" name="pushButton">
-         <property name="geometry">
-          <rect>
-           <x>330</x>
-           <y>220</y>
-           <width>89</width>
-           <height>25</height>
-          </rect>
-         </property>
-         <property name="text">
-          <string>PushButton</string>
          </property>
         </widget>
        </widget>
@@ -180,6 +170,32 @@
          </property>
          <property name="text">
           <string>Visualizar</string>
+         </property>
+        </widget>
+        <widget class="QPushButton" name="pushButton_rejeita">
+         <property name="geometry">
+          <rect>
+           <x>360</x>
+           <y>40</y>
+           <width>70</width>
+           <height>25</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Rejeita</string>
+         </property>
+        </widget>
+        <widget class="QPushButton" name="pushButton_aceita">
+         <property name="geometry">
+          <rect>
+           <x>260</x>
+           <y>40</y>
+           <width>70</width>
+           <height>25</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Aceita</string>
          </property>
         </widget>
        </widget>
@@ -290,6 +306,19 @@
        </property>
        <property name="text">
         <string>Log de operacao:</string>
+       </property>
+      </widget>
+      <widget class="QPushButton" name="pushButton">
+       <property name="geometry">
+        <rect>
+         <x>200</x>
+         <y>230</y>
+         <width>89</width>
+         <height>25</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>PushButton</string>
        </property>
       </widget>
      </widget>

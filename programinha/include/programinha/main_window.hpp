@@ -54,8 +54,9 @@ private Q_SLOTS:
         void on_horizontalSlider_exposure_sliderReleased();
 
         void on_pushButton_capturar_clicked();
-
         void on_pushButton_visualizar_clicked();
+        void on_pushButton_aceita_clicked();
+        void on_pushButton_rejeita_clicked();
 
 private:
 	Ui::MainWindowDesign ui;

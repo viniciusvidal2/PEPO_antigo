@@ -43,6 +43,10 @@ MainWindow::MainWindow(int argc, char** argv, QWidget *parent)
     ui.horizontalSlider_exposure->setValue(1500);
     ui.horizontalSlider_brightness->setValue(80);
 
+    // Acerta as cores para os botoes de aceitar e rejeitar
+    ui.pushButton_aceita->setStyleSheet( "background-color: rgb(10, 140, 200); color: rgb(0, 0, 0)");
+    ui.pushButton_rejeita->setStyleSheet("background-color: rgb(250, 50,  50); color: rgb(0, 0, 0)");
+
     // Iniciando o contador para qual aquisicao estamos
     contador_aquisicao = 0;
 
@@ -119,6 +123,11 @@ void programinha::MainWindow::on_pushButton_iniciarcaptura_clicked()
     }
     ssh_channel_close(channel);
     ssh_channel_free(channel);
+    sleep(2);
+    // Comecar o no de processamento dos dados que recebe aqui se for objeto
+    comando = "gnome-terminal -x sh -c 'roslaunch acc_obj acc_obj_online.launch pasta:="+pasta+"'";
+    if(ui.radioButton_object->isChecked())
+        system(comando.c_str());
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void programinha::MainWindow::on_pushButton_finalizarcaptura_clicked(){
@@ -195,6 +204,8 @@ void programinha::MainWindow::on_pushButton_capturar_clicked()
     if(ssh_channel_open_session(channel) == SSH_OK){
         if(ssh_channel_request_exec(channel, "rosservice call /proceder_obj 1") == SSH_OK){
             ui.listWidget->addItem(QString::fromStdString("Enviado pedido de captura"));
+            // Sinaliza que tambem esta capturando no Desktop
+            system("gnome-terminal -x sh -c 'rosservice call /capturar_obj 1'");
             // Aguarda um tempo para o comando ser executado e acusa que esta bem
             sleep(10);
             contador_aquisicao++;
@@ -207,7 +218,8 @@ void programinha::MainWindow::on_pushButton_capturar_clicked()
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void programinha::MainWindow::on_pushButton_visualizar_clicked()
 {
-    system("gnome-terminal -x sh -c 'rosrun rviz rviz -d $HOME/pepo_ws/src/PEPO/programinha/resources/visual.rviz'");
+    system("gnome-terminal -x sh -c 'rosrun rviz rviz -d $HOME/pepo_ws/src/PEPO/programinha/resources/visual.rviz'"    );
+    system("gnome-terminal -x sh -c 'rosrun rviz rviz -d $HOME/pepo_ws/src/PEPO/programinha/resources/visual_obj.rviz'");
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void programinha::MainWindow::on_pushButton_transferircaptura_clicked(){
@@ -224,3 +236,14 @@ void programinha::MainWindow::on_pushButton_transferircaptura_clicked(){
     system(("gnome-terminal -x sh -c '"+comando+"'").c_str());
     system("gnome-terminal -x sh -c 'roslaunch zmq_ros recebe_dados_zmq.launch'");
 }
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void programinha::MainWindow::on_pushButton_aceita_clicked(){
+    if(ui.radioButton_object->isChecked())
+        system("gnome-terminal -x sh -c 'rosservice call /capturar_obj 2'");
+}
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void programinha::MainWindow::on_pushButton_rejeita_clicked(){
+    if(ui.radioButton_object->isChecked())
+        system("gnome-terminal -x sh -c 'rosservice call /capturar_obj 3'");
+}
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////

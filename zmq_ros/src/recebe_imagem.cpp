@@ -71,7 +71,8 @@ int main(int argc, char **argv)
             Scalar color = Scalar(rand() % 255, rand() % 255, rand() % 255);
             circle(imfeat, kp.at(i).pt, 9, color, 4);
         }
-        im_bridge.image = imfeat;
+        header.stamp = ros::Time::now();
+        im_bridge = cv_bridge::CvImage(header, sensor_msgs::image_encodings::BGR8, imfeat);
         im_bridge.toImageMsg(im_msg);
         pub_feat.publish(im_msg);
 

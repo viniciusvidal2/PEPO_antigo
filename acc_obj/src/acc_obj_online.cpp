@@ -58,7 +58,7 @@ PointCloud<PointTN>::Ptr cref1;
 PointCloud<PointTN>::Ptr cpixnow;
 PointCloud<PointTN>::Ptr cpixref;
 // Matrizes com os indices da nuvem de cada pixel
-MatrixXi imrefpix(1080, 1920), imnowpix(1080, 1920);
+MatrixXi imrefpix, imnowpix;
 // Nome da nossa pasta que estamos trabalhando
 string pasta;
 // Imagem de agora e da referencia
@@ -70,7 +70,7 @@ Vector3f C;
 Quaternion<float> q;
 // Vetor de offset entre centro do laser e da camera - desenho solid, e foco
 Vector3f t_off_lc(0.00, 0.0443, 0.023);
-float f = 1130;
+float f = 1130/3;
 // Vetor de linhas para NVM
 vector<string> linhas_nvm;
 // Ponteiro para imagem que chega
@@ -84,6 +84,7 @@ int cont_aquisicao = 0;
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// Subscriber sincronizado para os dois dados
 void callback(const sensor_msgs::ImageConstPtr &msg_im, const sensor_msgs::PointCloud2ConstPtr &msg_cloud){
+    ROS_WARN("eNTRANDO AQUI!!");
     // Se vamos aceitar os dados que chegam para acumular
     if(aceita_dados){
         // Volta a flag
@@ -137,7 +138,7 @@ void callback(const sensor_msgs::ImageConstPtr &msg_im, const sensor_msgs::Point
                 ROS_INFO("Registrando nuvem atual no objeto final ...");
                 PointCloud<PointTN>::Ptr cnowtemp (new PointCloud<PointTN>);
                 PointCloud<PointTN>::Ptr cobjmem  (new PointCloud<PointTN>);
-                *cobjmem = *cobj; // Caso nao seja aceita a mudanca
+                *cobjmem  = *cobj; // Caso nao seja aceita a mudanca
                 *cnowtemp = *cnow;
                 roo->searchNeighborsKdTree(cnowtemp, cobj, 0.6);
                 *cobj += *cnowtemp;
@@ -165,8 +166,19 @@ void callback(const sensor_msgs::ImageConstPtr &msg_im, const sensor_msgs::Point
                     q = Tcam.block<3,3>(0, 0).transpose();
                     linhas_nvm.push_back(pc->escreve_linha_imagem(f, pasta+"imagem"+to_string(cont_aquisicao)+".png", C, q));
                     pc->compileFinalNVM(linhas_nvm);
-                    ROS_INFO("Salvando a imagem na pasta ...");
-                    imwrite(pasta+"imagem"+to_string(cont_aquisicao)+".png", imnow);
+
+                    // Salva as coisas
+                    ROS_INFO("Salvando a imagem e nuvem na pasta ...");
+                    if(cont_aquisicao < 10){
+                      pc->saveImage(imnow, "imagem_00"+std::to_string(cont_aquisicao));
+                      pc->saveCloud(cloud, "pf_00"+std::to_string(cont_aquisicao));
+                    } else if(cont_aquisicao < 100) {
+                      pc->saveImage(imnow, "imagem_0"+std::to_string(cont_aquisicao));
+                      pc->saveCloud(cloud, "pf_0"+std::to_string(cont_aquisicao));
+                    } else {
+                      pc->saveImage(imnow, "imagem_"+std::to_string(cont_aquisicao));
+                      pc->saveCloud(cloud, "pf_"+std::to_string(cont_aquisicao));
+                    }
 
                     // Atualiza as referencias e parte para a proxima aquisicao
                     *cref1 = *cnow;
@@ -264,10 +276,12 @@ int main(int argc, char **argv)
 
     pcl::console::setVerbosityLevel(pcl::console::L_ALWAYS);
 
+    ROS_INFO("Iniciando no de captura de objeto online ...");
+
     // Inicia nuvens
     cobj    = (PointCloud<PointTN>::Ptr) new PointCloud<PointTN>;
     cnow    = (PointCloud<PointTN>::Ptr) new PointCloud<PointTN>;
-    cref1    = (PointCloud<PointTN>::Ptr) new PointCloud<PointTN>;
+    cref1   = (PointCloud<PointTN>::Ptr) new PointCloud<PointTN>;
     cpixnow = (PointCloud<PointTN>::Ptr) new PointCloud<PointTN>;
     cpixref = (PointCloud<PointTN>::Ptr) new PointCloud<PointTN>;
     cobj->header.frame_id = "obj";
@@ -288,18 +302,20 @@ int main(int argc, char **argv)
     roo = new RegisterObjectOptm();
 
     // Inicia os subscribers da imagem e nuvem atuais
-    message_filters::Subscriber<sensor_msgs::Image      > subim(nh, "/imagem"     , 10);
-    message_filters::Subscriber<sensor_msgs::PointCloud2> subpc(nh, "/nuvem_atual", 10);
-    Synchronizer<syncPolicy> sync(syncPolicy(10), subim, subpc);
+    message_filters::Subscriber<sensor_msgs::Image      > subim(nh, "/imagem"     , 100);
+    message_filters::Subscriber<sensor_msgs::PointCloud2> subpc(nh, "/nuvem_atual", 100);
+    Synchronizer<syncPolicy> sync(syncPolicy(100), subim, subpc);
     sync.registerCallback(boost::bind(&callback, _1, _2));
 
     // Inicia o servico de aquisicao
-    ros::ServiceServer procedimento = nh.advertiseService("/capturar", comando_aquisitar);
+    ros::ServiceServer procedimento = nh.advertiseService("/capturar_obj", comando_aquisitar);
 
     // Inicia o publicador da nuvem objeto atual
-    ros::Publisher pub = nh.advertise<sensor_msgs::PointCloud2>("/obj", 10);
+    ros::Publisher pub = nh.advertise<sensor_msgs::PointCloud2>("/obj_online", 10);
     sensor_msgs::PointCloud2 pc_msg;
     pc_msg.header.frame_id = "obj";
+
+    ROS_INFO("No pronto para receber capturas.");
 
     // Roda o no
     ros::Rate r(1);
