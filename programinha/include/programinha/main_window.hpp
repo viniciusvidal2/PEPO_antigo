@@ -52,6 +52,8 @@ private Q_SLOTS:
 
         void on_horizontalSlider_brightness_sliderReleased();
         void on_horizontalSlider_exposure_sliderReleased();
+        void on_horizontalSlider_contrast_sliderReleased();
+        void on_horizontalSlider_saturation_sliderReleased();
 
         void on_pushButton_capturar_clicked();
         void on_pushButton_visualizar_clicked();

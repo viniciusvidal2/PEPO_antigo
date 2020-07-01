@@ -149,7 +149,7 @@ void RegisterObjectOptm::matchFeaturesAndFind3DPoints(Mat imref, Mat imnow, Poin
     vector< DMatch > good_matches;
 
     int tent = 0; // tentativas maximas de achar npontos3d correspondencias bacanas
-    float min_hessian = 1500; //sigma_thresh = 1.6/10, edge_thresh = 10*10, contrast_thresh = 0.04/10;
+    float min_hessian = 1500;
 
     /// Loop de busca por matches e pontos 3D correspondentes ///
     while(tent < 15 && matches3d.size() <= npontos3d){
@@ -176,19 +176,19 @@ void RegisterObjectOptm::matchFeaturesAndFind3DPoints(Mat imref, Mat imnow, Poin
                 }
             }
         }
-        // Filtrando por distancia media entre os matches
-        vector<float> distances (good_matches.size());
-        for (int i=0; i < good_matches.size(); i++)
-            distances[i] = good_matches[i].distance;
-        float average = accumulate(distances.begin(), distances.end(), 0.0) / distances.size();
-        for(vector<DMatch>::iterator it = good_matches.begin(); it!=good_matches.end();){
-            if(it->distance > average)
-                good_matches.erase(it);
-            else
-                ++it;
-        }
-        // Filtrando por angulo das linhas entre os matches
-        this->filterMatchesLineCoeff(good_matches, kpref, kpnow, imref.cols, 1);
+//        // Filtrando por distancia media entre os matches
+//        vector<float> distances (good_matches.size());
+//        for (int i=0; i < good_matches.size(); i++)
+//            distances[i] = good_matches[i].distance;
+//        float average = accumulate(distances.begin(), distances.end(), 0.0) / distances.size();
+//        for(vector<DMatch>::iterator it = good_matches.begin(); it!=good_matches.end();){
+//            if(it->distance > average)
+//                good_matches.erase(it);
+//            else
+//                ++it;
+//        }
+//        // Filtrando por angulo das linhas entre os matches
+//        this->filterMatchesLineCoeff(good_matches, kpref, kpnow, imref.cols, 1);
 
         tent += 1;
         min_hessian *= 0.7;
@@ -254,9 +254,9 @@ void RegisterObjectOptm::matchFeaturesAndFind3DPoints(Mat imref, Mat imnow, Poin
             for(size_t j=0; j<good_matches.size(); j++){
             int curr_pt_ref = -1, curr_pt_now = -1; // Indice do melhor ponto no momento
             // Na imagem ref ver se naquela redondeza ha um pixel
-            curr_pt_ref = this->searchNeighbors(refpix, imrefpts[j].y, imrefpts[j].x, 5);
+            curr_pt_ref = this->searchNeighbors(refpix, imrefpts[j].y, imrefpts[j].x, 20);
             // Na imagem now ver se naquela redondeza ha um pixel
-            curr_pt_now = this->searchNeighbors(nowpix, imnowpts[j].y, imnowpts[j].x, 5);
+            curr_pt_now = this->searchNeighbors(nowpix, imnowpts[j].y, imnowpts[j].x, 20);
 
             // Se foi encontrado um indice para cada nuvem, anotar isso no vetor de indices de match nas nuvens
             if(curr_pt_ref != -1 && curr_pt_now != -1){

@@ -40,8 +40,12 @@ MainWindow::MainWindow(int argc, char** argv, QWidget *parent)
     // Acertando os limites dos sliders
     ui.horizontalSlider_exposure->setRange(0, 2200);
     ui.horizontalSlider_brightness->setRange(0, 130);
+    ui.horizontalSlider_contrast->setRange(0, 50);
+    ui.horizontalSlider_saturation->setRange(50, 200);
     ui.horizontalSlider_exposure->setValue(1500);
     ui.horizontalSlider_brightness->setValue(80);
+    ui.horizontalSlider_contrast->setValue(20);
+    ui.horizontalSlider_saturation->setValue(100);
 
     // Acerta as cores para os botoes de aceitar e rejeitar
     ui.pushButton_aceita->setStyleSheet( "background-color: rgb(10, 140, 200); color: rgb(0, 0, 0)");
@@ -131,7 +135,10 @@ void programinha::MainWindow::on_pushButton_iniciarcaptura_clicked()
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void programinha::MainWindow::on_pushButton_finalizarcaptura_clicked(){
-    // Iniciando canal e secao SSH
+    // Se for objeto, salvar o objeto
+    if(ui.radioButton_object->isChecked())
+        system("gnome-terminal -x sh -c 'rosservice call /capturar_obj 5'");
+    // Iniciando canal   SSH
     ssh_channel channel;
     if(ui.radioButton_object->isChecked()){
         channel = ssh_channel_new(pepo_ssh);
@@ -187,6 +194,36 @@ void programinha::MainWindow::on_horizontalSlider_exposure_sliderReleased(){
     if(ssh_channel_open_session(channel) == SSH_OK){
         if(ssh_channel_request_exec(channel, comando.c_str()) == SSH_OK)
             ui.listWidget->addItem(QString::fromStdString("Exposicao alterada com sucesso para "+to_string(valor)+"."));
+    }
+    ssh_channel_close(channel);
+    ssh_channel_free(channel);
+}
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void programinha::MainWindow::on_horizontalSlider_contrast_sliderReleased(){
+    // Pega o valor
+    int valor = ui.horizontalSlider_contrast->value();
+    string comando = "v4l2-ctl --set-ctrl=contrast="+to_string(valor);
+    // Inicia o canal e envia o comando
+    ssh_channel channel;
+    channel = ssh_channel_new(pepo_ssh);
+    if(ssh_channel_open_session(channel) == SSH_OK){
+        if(ssh_channel_request_exec(channel, comando.c_str()) == SSH_OK)
+            ui.listWidget->addItem(QString::fromStdString("Contraste alterado com sucesso para "+to_string(valor)+"."));
+    }
+    ssh_channel_close(channel);
+    ssh_channel_free(channel);
+}
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void programinha::MainWindow::on_horizontalSlider_saturation_sliderReleased(){
+    // Pega o valor
+    int valor = ui.horizontalSlider_saturation->value();
+    string comando = "v4l2-ctl --set-ctrl=saturation="+to_string(valor);
+    // Inicia o canal e envia o comando
+    ssh_channel channel;
+    channel = ssh_channel_new(pepo_ssh);
+    if(ssh_channel_open_session(channel) == SSH_OK){
+        if(ssh_channel_request_exec(channel, comando.c_str()) == SSH_OK)
+            ui.listWidget->addItem(QString::fromStdString("Saturacao alterada com sucesso para "+to_string(valor)+"."));
     }
     ssh_channel_close(channel);
     ssh_channel_free(channel);

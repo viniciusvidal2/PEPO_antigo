@@ -13,6 +13,7 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/opencv.hpp>
 #include <opencv2/xfeatures2d.hpp>
+#include <image_transport/image_transport.h>
 
 #include <Eigen/Geometry>
 #include <Eigen/Dense>
@@ -38,8 +39,9 @@ int main(int argc, char **argv)
     int con = zmq_connect(receiver, "tcp://192.168.0.101:5557");
 
     // Publisher para imagem
-    ros::Publisher pub      = nh.advertise<sensor_msgs::Image>("/imagem"     , 10);
-    ros::Publisher pub_feat = nh.advertise<sensor_msgs::Image>("/imagem_feat", 10);
+    ros::Publisher pub = nh.advertise<sensor_msgs::Image>("/imagem", 10);
+    image_transport::ImageTransport it(nh);
+    image_transport::Publisher pub_feat = it.advertise("/imagem_feat", 10);
 
     // Criando mensagem para cada imagem
     zmq_msg_t imagem_zmq;
@@ -63,18 +65,22 @@ int main(int argc, char **argv)
 
         // Publicando imagem com features capturadas
         Ptr<xfeatures2d::SURF> f2d = xfeatures2d::SURF::create(1000);
-        Mat imfeat;
+        Mat imfeat, descriptors;
+        im.copyTo(imfeat);
         vector<KeyPoint> kp;
-        f2d->detectAndCompute(im, Mat(), kp, imfeat);
-        int ncircles = (kp.size() > 20) ? 20 : kp.size();
+        f2d->detectAndCompute(imfeat, Mat(), kp, descriptors);
+        int ncircles = (kp.size() > 50) ? 50 : kp.size();
         for(int i=0; i<ncircles; i++){
             Scalar color = Scalar(rand() % 255, rand() % 255, rand() % 255);
             circle(imfeat, kp.at(i).pt, 9, color, 4);
         }
-        header.stamp = ros::Time::now();
-        im_bridge = cv_bridge::CvImage(header, sensor_msgs::image_encodings::BGR8, imfeat);
-        im_bridge.toImageMsg(im_msg);
-        pub_feat.publish(im_msg);
+        imfeat.copyTo(imfeat);
+        cv_bridge::CvImagePtr cv_feat_ptr(new cv_bridge::CvImage);
+        cv_feat_ptr->encoding = "bgr8";
+        cv_feat_ptr->header.stamp = ros::Time::now();
+        cv_feat_ptr->header.frame_id = "/map";
+        cv_feat_ptr->image = imfeat;
+        pub_feat.publish(cv_feat_ptr->toImageMsg());
 
         ros::spinOnce();
     }
