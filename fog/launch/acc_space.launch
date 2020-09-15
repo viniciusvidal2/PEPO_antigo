@@ -1,0 +1,14 @@
+<launch>
+<arg name="pasta" default="Dados_PEPO"/>
+<arg name="voxel_size" default="2"/>
+<arg name="depth" default="20"/>
+<arg name="filter_poli" default="0"/>
+
+<node name="acc_space_node" pkg="fog" type="acc_space_node" output="screen">
+    <param name="pasta" value="$(arg pasta)"      />
+    <param name="vs"    value="$(arg voxel_size)" />
+    <param name="df"    value="$(arg depth)"      />
+    <param name="fp"    value="$(arg filter_poli)"/>
+</node>
+
+</launch>

@@ -1,0 +1,13 @@
+<launch>
+
+<arg name="pasta"     default="gerador_tomada1"/>
+<arg name="resolucao" default="0.04"           />
+<arg name="lado_area" default="20"             />
+
+<node name="planta_baixa_node" pkg="fog" type="planta_baixa_node" output="screen">
+    <param name="pasta"     value="$(arg pasta)"    />
+    <param name="resolucao" value="$(arg resolucao)"/>
+    <param name="lado_area" value="$(arg lado_area)"/>
+</node>
+
+</launch>
