@@ -1,0 +1,11 @@
+<launch>
+<arg name="pasta" default="quintalcertinho"/>
+<arg name="ambiente" default="2"/> <!--1 e interno, 2 e externo-->
+
+<node name="clusters_node" pkg="clusters" type="clusters_node" output="screen">
+    <param name="pasta"    value="$(arg pasta)"/>
+    <param name="ambiente" value="$(arg ambiente)"/>
+</node>
+
+
+</launch>
