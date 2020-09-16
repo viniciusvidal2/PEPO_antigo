@@ -1,0 +1,13 @@
+<launch>
+<arg name="pasta" default="Santos_Dumont/objeto1"/>
+<arg name="visualizar" default="true"/>
+
+<node name="acc_obj_node" pkg="acc_obj" type="acc_obj_node" output="screen">
+    <param name="pasta" value="$(arg pasta)"/>
+</node>
+
+<group if="$(arg visualizar)">
+    <node name="ver_obj_rviz" pkg="rviz" type="rviz" output="screen" args="-d $(env HOME)/pepo_ws/src/PEPO/acc_obj/resources/rviz.rviz"/>
+</group>
+
+</launch>

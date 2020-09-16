@@ -1,0 +1,9 @@
+<launch>
+<arg name="pasta" default="Dados_PEPO"/>
+<arg name="visualizar" default="true"/>
+
+<!--<node name="acc_obj_online_node" pkg="acc_obj" type="acc_obj_online_node" output="screen">
+    <param name="pasta" value="$(arg pasta)"/>
+</node>-->
+
+</launch>
