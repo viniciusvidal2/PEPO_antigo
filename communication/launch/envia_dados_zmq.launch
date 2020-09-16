@@ -1,0 +1,11 @@
+<launch>
+
+<!--Nome da pasta com os dados a serem enviados-->
+<arg name="pasta_dados" default="Dados_B9"/>
+
+<!--Lancar no de comunicacao que envia tudo para o Desktop por ZMQ-->
+<node name="envia_dados_zmq_node" pkg="communication" type="envia_dados_zmq" output="screen">
+    <param name="pasta" value="$(arg pasta_dados)"/>
+</node>
+
+</launch>

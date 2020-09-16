@@ -1,0 +1,27 @@
+<launch>
+<!--Visualizar ou nao a nuvem-->
+<arg name="visualizar" default="false"/>
+<arg name="pasta" default="Dados_PEPO"/>
+
+<!--Lancar no do driver do laser-->
+<include file="$(find livox_ros_driver)/launch/livox_lidar.launch"/>
+
+<!--Lancar os servos 60kg-->
+<node name="servos60kg" pkg="servos60kg" type="controle_servos.py" output="screen"/>
+
+<!--Lancar no do driver camera USB - Lancar externo se tiver warning chato-->
+<node name="camera" pkg="cv_camera" type="cv_camera_node" output="screen">
+    </node>
+
+<!--Lancar scanner propriamente dito, online-->
+<node name="scanner_aquisicao" pkg="laser_camera" type="scanner_aquisicao" output="screen">
+    <param name="pasta" value="$(arg pasta)"/>
+</node>
+
+<!--Lancar RViz com configuracao salva-->
+<group if="$(arg visualizar)">
+    <node name="rviz_B9" pkg="rviz" type="rviz" args=" -d $(find laser_camera)/resources/aquisicao.rviz" output="screen">
+    </node>
+</group>
+
+</launch>
