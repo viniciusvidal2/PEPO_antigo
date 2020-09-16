@@ -1,0 +1,7 @@
+<launch>
+<arg name="pasta_dados" default="Dados_PEPO"/>
+
+<node name="projeta_esfera2_node" pkg="panoramica_esfera" type="projeta_esfera2" output="screen">
+    <param name="pasta" value="$(arg pasta_dados)"/>
+</node>
+</launch>
